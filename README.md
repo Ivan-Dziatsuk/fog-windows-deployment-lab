@@ -34,6 +34,8 @@ The project demonstrates practical skills in Windows Server administration, Acti
 | DC01 | Active Directory, DNS, DHCP | `192.168.10.10` |
 | FOG01 | FOG Project, PXE, image deployment | `192.168.10.20` |
 | WIN11-TEST | Windows 11 deployment and domain client | DHCP |
+| Client1 | Windows 11 deployment and domain client | DHCP |
+| WIN11-IMAGE | Windows 11 deployment, test machine not in domain |
 
 ## Technologies
 
