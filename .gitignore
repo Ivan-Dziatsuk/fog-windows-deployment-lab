@@ -1,0 +1,27 @@
+# Windows temporary files
+Thumbs.db
+Desktop.ini
+*.tmp
+
+# Log files
+*.log
+
+# Virtual machine files
+*.vdi
+*.vhd
+*.vhdx
+*.ova
+*.ovf
+
+# Backup files
+*.bak
+*.backup
+
+# Sensitive files
+.env
+*.secret
+secrets/
+credentials/
+
+# PowerShell history
+ConsoleHost_history.txt
