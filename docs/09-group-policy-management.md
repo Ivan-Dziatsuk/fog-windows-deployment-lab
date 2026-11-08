@@ -1,343 +1,372 @@
-# SMB File Server Configuration
+# Group Policy Management
 
 ## 1. Overview
 
-SMB (Server Message Block) is a network file-sharing protocol used to provide access to shared folders and files.
+Group Policy is a Windows feature used to centrally manage user and computer settings in an Active Directory environment.
 
-In this lab, Windows Server 2022 (`DC01`) is configured as a file server.
+In this lab, Group Policy is used to manage Windows security settings, audit policies, and computer configuration.
 
-The shared folder is used to demonstrate centralized file access management through:
+Group Policy Objects (GPOs) are managed through Group Policy Management Console (GPMC) and can be linked to domains or Organizational Units.
 
-- SMB Share Permissions
-- NTFS Permissions
-- Active Directory security groups
-- Permission inheritance
-- Effective Access verification
+The domain controller is `DC01`, running Windows Server 2022.
 
-## 2. File Server Information
+## 2. Group Policy Environment
+
+### Domain Information
 
 | Parameter | Value |
 |---|---|
-| File Server | `DC01` |
-| Operating System | Windows Server 2022 |
-| Server IP | `192.168.10.10` |
-| Shared Folder | `C:\Shares\IT-Share` |
-| Share Name | `IT-Share` |
-| UNC Path | `\\DC01\IT-Share` |
+| Domain | `contoso.local` |
+| Domain Controller | `DC01` |
+| Domain Controller IP | `192.168.10.10` |
+| Computer OU | `IT-Computers` |
+| Computer OU DN | `OU=IT-Computers,DC=contoso,DC=local` |
 
-### Folder Structure
+### Existing Group Policy Objects
 
-The shared directory contains three subfolders:
+The following GPOs were observed in the Group Policy Results output on the domain-joined test computer:
 
-```text id="smbtree"
-C:\Shares\IT-Share
-│
-├── Public
-│
-├── Helpdesk
-│
-└── Admin
+| GPO Name | Purpose |
+|---|---|
+| Default Domain Policy | Default domain-wide settings |
+| GPO-Defender Baseline | Microsoft Defender configuration |
+| GPO - Security Audit | Advanced security auditing |
+| GPO - Windows Update | Windows Update management |
+| IT-Computers-Policy | Computer policies for the IT-Computers OU |
+
+The exact settings of each GPO should be verified in Group Policy Management before making changes.
+
+## 3. GUI Configuration
+
+### Open Group Policy Management
+
+1. Open Server Manager on `DC01`.
+2. Select Tools.
+3. Click Group Policy Management.
+4. Expand Forest.
+5. Expand Domains.
+6. Expand `contoso.local`.
+
+The console displays the domain structure, Organizational Units, and linked Group Policy Objects.
+
+### View GPO Links
+
+1. Expand `contoso.local`.
+2. Select the `IT-Computers` OU.
+3. Open the Linked Group Policy Objects tab.
+4. Review the linked policies.
+5. Check which GPOs are inherited from the parent domain.
+
+The `IT-Computers-Policy` GPO is linked to the `IT-Computers` OU.
+
+### Create a New GPO
+
+1. Right-click the target domain or Organizational Unit.
+2. Select Create a GPO in this domain, and Link it here.
+3. Enter a descriptive GPO name.
+4. Click OK.
+
+A new GPO can also be created separately in Group Policy Objects and linked later.
+
+### Edit a GPO
+
+1. Locate the required GPO.
+2. Right-click it.
+3. Select Edit.
+4. Navigate through Computer Configuration or User Configuration.
+5. Configure the required policy settings.
+6. Close the editor.
+
+Computer Configuration applies to computer accounts, while User Configuration applies to user accounts.
+
+## 4. GPO-Defender Baseline
+
+This GPO contains a Microsoft Defender Antivirus setting for potentially unwanted applications (PUA).
+
+### Configuration Path
+
+Open Group Policy Management and edit:
+
+`GPO-Defender Baseline`
+
+Navigate to:
+
+```text
+Computer Configuration
+  → Policies
+    → Administrative Templates
+      → Windows Components
+        → Microsoft Defender Antivirus
+          → MpEngine
 ```
 
-Each folder has a separate access configuration.
+Open:
 
-## 3. Share Permissions
+`Configure detection for potentially unwanted applications`
 
-Share Permissions control access when users connect to a folder through the network.
+### Configured Setting
 
-The following permissions are configured for the `IT-Share` SMB share:
-
-| Security Principal | Share Permission |
+| Parameter | Value |
 |---|---|
-| Employees | Change |
-| Helpdesk | Change |
-| IT-Admins | Full Control |
-| Domain Admins | Full Control |
+| Policy | Configure detection for potentially unwanted applications |
+| State | Enabled |
+| Detection Action | Block |
 
-### Configure Share Permissions Using GUI
+This configuration enables Microsoft Defender PUA protection in Block mode.
 
-1. Open Server Manager.
-2. Select File and Storage Services.
-3. Select Shares.
-4. Locate `IT-Share`.
-5. Right-click the share and select Properties.
-6. Open the Permissions section.
-7. Select Customize permissions.
-8. Open the Share tab.
-9. Review or configure the required groups and permissions.
-10. Apply the changes.
+### Verify Defender Configuration
 
-### Share Permission Levels
+Run on the domain-joined Windows test computer:
 
-| Permission | Description |
+```powershell
+Get-MpPreference |
+    Select-Object PUAProtection
+```
+
+Observed configuration:
+
+| Value | Meaning |
 |---|---|
-| Read | View files and folders |
-| Change | Read, create, modify, and delete files |
-| Full Control | Includes Read and Change permissions and allows management of share permissions |
+| 0 | Disabled |
+| 1 | Block |
+| 2 | Audit |
 
-Share Permissions apply to network access through the SMB share. They do not replace NTFS permissions.
+The PUA protection setting was changed from Audit (`2`) to Block (`1`) through Group Policy.
 
-## 4. NTFS Permissions
+The effective value can be checked with `Get-MpPreference`. Group Policy Results can additionally be used to identify the policy applied to the computer.
 
-NTFS permissions control access to files and folders on the filesystem.
+## 5. GPO - Security Audit
 
-Unlike Share Permissions, NTFS permissions also apply to local access.
+This GPO is used to manage Windows Advanced Audit Policy settings.
 
-The lab uses separate access permissions for each subfolder.
+Audit policies allow Windows to record security-related events in the Security event log.
 
-### Configured NTFS Permissions
+### Configuration Path
 
-| Folder | Security Principal | NTFS Permission |
-|---|---|---|
-| Public | Employees | Modify |
-| Helpdesk | Helpdesk | Modify |
-| Admin | IT-Admins | Full Control |
+Edit:
 
-These permissions demonstrate how access can be separated according to department responsibilities.
+`GPO - Security Audit`
 
-### Configure NTFS Permissions Using GUI
+Navigate to:
 
-1. Open File Explorer on `DC01`.
-2. Navigate to `C:\Shares\IT-Share`.
-3. Right-click the required folder.
-4. Select Properties.
-5. Open the Security tab.
-6. Select Advanced for detailed permission management.
-7. Review the existing permission entries.
-8. Add or modify the required security group.
-9. Select the appropriate permission level.
-10. Apply the changes.
+```text
+Computer Configuration
+  → Policies
+    → Windows Settings
+      → Security Settings
+        → Advanced Audit Policy Configuration
+          → System Audit Policies
+```
 
-Repeat this process for the `Public`, `Helpdesk`, and `Admin` folders.
+The following policy areas were used during configuration:
 
-### Permission Inheritance
+### Logon/Logoff
 
-NTFS supports permission inheritance.
+Relevant audit settings:
 
-Permissions configured on a parent folder can be inherited by its child files and folders.
+- Audit Logon
+- Audit Logoff
+- Audit Account Lockout
 
-Inheritance can be reviewed and managed through:
+These settings help monitor authentication activity and account lockout events.
 
-`Folder Properties → Security → Advanced`
+### Account Management
 
-The actual inherited and explicit permission entries should be checked before modifying them.
+Relevant audit settings:
 
-**Important:** The permissions listed above describe the configured group entries. Other inherited permissions, group memberships, and explicit Deny entries can also affect a user's effective access.
+- Audit User Account Management
+- Audit Security Group Management
 
-## 5. PowerShell Configuration
+These settings help monitor changes to user accounts and security groups.
 
-Run these commands on `DC01` using an elevated PowerShell session.
+The effective state of each audit subcategory should be checked on the target computer before claiming that every setting is enabled.
 
-### Create the Shared Folder Structure
+### Verify Audit Policy
 
-The following commands create the directory structure if it does not already exist.
+Run on the Windows test computer:
 
-```powershell id="smbfolders"
-$BasePath = "C:\Shares\IT-Share"
+```powershell
+auditpol /get /category:*
+```
 
-$Folders = @(
-    "$BasePath\Public",
-    "$BasePath\Helpdesk",
-    "$BasePath\Admin"
-)
+This displays the effective Advanced Audit Policy configuration.
 
-foreach ($Folder in $Folders) {
-    New-Item -Path $Folder -ItemType Directory -Force |
-        Out-Null
+### Review Security Events
+
+1. Open Event Viewer.
+2. Expand Windows Logs.
+3. Select Security.
+4. Review authentication and account management events.
+
+Useful event IDs include:
+
+| Event ID | Description |
+|---|---|
+| 4624 | Successful logon |
+| 4625 | Failed logon |
+| 4634 | Account logged off |
+| 4647 | User initiated logoff |
+| 4740 | User account locked out |
+| 4720 | User account created |
+| 4726 | User account deleted |
+| 4728 | Member added to a global security group |
+| 4732 | Member added to a local security group |
+
+Event generation depends on the effective audit policy and the activity performed.
+
+## 6. GPO - Windows Update
+
+This GPO is used for Windows Update-related computer settings.
+
+### Configuration Path
+
+Edit:
+
+`GPO - Windows Update`
+
+Navigate to:
+
+```text
+Computer Configuration
+  → Policies
+    → Administrative Templates
+      → Windows Components
+        → Windows Update
+```
+
+Review the available policy settings and their current states.
+
+The exact Windows Update policy values should be documented after checking the GPO in Group Policy Management.
+
+### Verify the GPO
+
+Use Group Policy Results to check whether the GPO is applied to the target computer.
+
+The presence of a GPO in the applied policy list confirms that it was processed, but does not by itself prove a specific Windows Update setting is active.
+
+## 7. PowerShell Configuration and Management
+
+Run these commands on `DC01` using an elevated PowerShell session with the Group Policy module available.
+
+### Display All GPOs
+
+```powershell
+Get-GPO -All |
+    Select-Object DisplayName, GpoStatus, Id
+```
+
+### Display a Specific GPO
+
+```powershell
+Get-GPO -Name "GPO-Defender Baseline" |
+    Format-List DisplayName, Id, GpoStatus,
+        CreationTime, ModificationTime
+```
+
+### Create a New GPO
+
+Example of creating a new GPO only if it does not already exist:
+
+```powershell
+$GpoName = "GPO-Example"
+
+$ExistingGPO = Get-GPO `
+    -Name $GpoName `
+    -ErrorAction SilentlyContinue
+
+if (-not $ExistingGPO) {
+    New-GPO -Name $GpoName
+}
+else {
+    Write-Host "GPO already exists: $GpoName"
 }
 ```
 
-### Create an SMB Share
+This is a reusable example and does not create or modify any of the existing lab GPOs.
 
-Example configuration for a new share:
+### Check GPO Inheritance
 
-```powershell id="smbcreate"
-New-SmbShare `
-    -Name "IT-Share" `
-    -Path "C:\Shares\IT-Share" `
-    -ChangeAccess "CONTOSO\Employees", "CONTOSO\Helpdesk" `
-    -FullAccess "CONTOSO\IT-Admins", "CONTOSO\Domain Admins"
+```powershell
+Get-GPInheritance `
+    -Target "OU=IT-Computers,DC=contoso,DC=local"
 ```
 
-This command creates a new share. Do not run it if `IT-Share` already exists.
+This displays linked GPOs and inheritance information for the selected OU.
 
-### Display SMB Shares
+### Export GPO Reports
 
-```powershell id="smbdisplay"
-Get-SmbShare |
-    Select-Object Name, Path, Description
+Create a directory for reports:
+
+```powershell
+New-Item `
+    -Path "C:\Temp" `
+    -ItemType Directory `
+    -Force
 ```
 
-### Display Share Permissions
+Export an HTML report containing all GPOs:
 
-```powershell id="smbaccess"
-Get-SmbShareAccess -Name "IT-Share"
+```powershell
+Get-GPOReport `
+    -All `
+    -ReportType Html `
+    -Path "C:\Temp\GPO-Report.html"
 ```
 
-### Configure NTFS Permissions
+The report can be opened in a web browser for further inspection.
 
-The following commands add the specified permissions to the existing folders.
+## 8. Verification on a Windows Client
 
-```powershell id="smbacl"
-# Employees: Modify access to Public
-icacls "C:\Shares\IT-Share\Public" `
-    /grant "CONTOSO\Employees:(OI)(CI)M"
+These commands are run on a domain-joined Windows test computer.
 
-# Helpdesk: Modify access to Helpdesk
-icacls "C:\Shares\IT-Share\Helpdesk" `
-    /grant "CONTOSO\Helpdesk:(OI)(CI)M"
+### Check Computer Policy Results
 
-# IT-Admins: Full Control over Admin
-icacls "C:\Shares\IT-Share\Admin" `
-    /grant "CONTOSO\IT-Admins:(OI)(CI)F"
+```powershell
+gpresult /r /scope computer
 ```
 
-Explanation:
+This displays the computer policies applied to the machine.
 
-| Parameter | Meaning |
-|---|---|
-| `/grant` | Adds an Allow permission |
-| `(OI)` | Object Inherit — applies to files |
-| `(CI)` | Container Inherit — applies to subfolders |
-| `M` | Modify |
-| `F` | Full Control |
+### Generate an HTML Group Policy Report
 
-These commands add permissions; they do not remove other existing Allow or Deny entries. Review the resulting ACL before assuming these are the only permissions.
-
-### Display NTFS Permissions
-
-```powershell id="smbshowacl"
-icacls "C:\Shares\IT-Share\Public"
-icacls "C:\Shares\IT-Share\Helpdesk"
-icacls "C:\Shares\IT-Share\Admin"
+```powershell
+gpresult /h C:\Temp\gpresult.html /scope computer /f
 ```
 
-## 6. Verification
+Open the resulting HTML file in a browser to inspect applied policies and policy details.
 
-### Verify the SMB Share
+### Update Group Policy
 
-```powershell id="smbverify"
-Get-SmbShare -Name "IT-Share" |
-    Select-Object Name, Path, Description
+```powershell
+gpupdate /force
 ```
 
-### Verify Share Permissions
+This requests a refresh of both computer and user Group Policy settings.
 
-```powershell id="smbverifyaccess"
-Get-SmbShareAccess -Name "IT-Share"
-```
+Some policy changes may require a restart or logoff before they take effect.
 
-### Verify NTFS Permissions
+## 9. Screenshots
 
-```powershell id="smbverifyacl"
-icacls "C:\Shares\IT-Share"
-icacls "C:\Shares\IT-Share\Public"
-icacls "C:\Shares\IT-Share\Helpdesk"
-icacls "C:\Shares\IT-Share\Admin"
-```
-
-### Test Network Access
-
-From a Windows client, use:
-
-```powershell id="smbtest"
-Test-Path "\\DC01\IT-Share"
-```
-
-Display the shared folder contents:
-
-```powershell id="smbcontents"
-Get-ChildItem "\\DC01\IT-Share"
-```
-
-These commands test access using the current Windows security context. A failed `Test-Path` does not by itself distinguish between a missing path and an access or connectivity problem.
-
-### Connect to the Share
-
-Open File Explorer and enter:
-
-```text id="smbunc"
-\\DC01\IT-Share
-```
-
-Alternatively, map the shared folder to a network drive:
-
-```powershell id="smbmap"
-New-PSDrive `
-    -Name "IT" `
-    -PSProvider FileSystem `
-    -Root "\\DC01\IT-Share" `
-    -Persist
-```
-
-## 7. Effective Access and Troubleshooting
-
-Windows evaluates both Share Permissions and NTFS Permissions when a user accesses a folder through an SMB share.
-
-The effective network access is limited by the permissions granted at both layers.
-
-For example:
-
-- Share permission: Change
-- NTFS permission: Modify
-- Effective access: Modify-level file access, limited by both permission layers.
-
-An Allow permission at one layer cannot override a restriction imposed by the other layer.
-
-### Factors Affecting Effective Access
-
-- Active Directory group membership.
-- Inherited NTFS permissions.
-- Explicit Allow and Deny entries.
-- Share-level permissions.
-- The user's current Windows logon security token.
-
-A user who has recently been added to a security group may need to sign out and sign in again to refresh the group membership in the logon token.
-
-### Verify Effective Access Using GUI
-
-1. Open the folder Properties.
-2. Select the Security tab.
-3. Open Advanced.
-4. Select Effective Access.
-5. Select a user or group.
-6. Click View effective access.
-7. Review the resulting permissions.
-
-### Important Troubleshooting Checks
-
-When a user cannot access a shared folder, check:
-
-1. Whether the user belongs to the correct Active Directory security group.
-2. Whether the SMB share permissions allow access.
-3. Whether NTFS permissions allow access.
-4. Whether inheritance or explicit Deny permissions affect access.
-5. Whether the user has refreshed their logon session after group membership changes.
-
-## 8. Screenshots
-
-The following screenshots document the SMB file server configuration:
+The following screenshots document Group Policy configuration and verification:
 
 | Screenshot | Description |
 |---|---|
-| `51-smb-folder-structure.png` | IT-Share folder structure |
-| `52-smb-share-properties.png` | SMB share properties |
-| `53-smb-share-permissions.png` | Share permissions |
-| `54-smb-public-ntfs.png` | Public folder NTFS permissions |
-| `55-smb-helpdesk-ntfs.png` | Helpdesk folder NTFS permissions |
-| `56-smb-admin-ntfs.png` | Admin folder NTFS permissions |
-| `57-smb-powershell-acl.png` | PowerShell ACL verification |
-| `58-smb-effective-access.png` | Effective Access configuration |
-| `59-smb-client-access.png` | Shared folder access from a Windows client |
+| `44-gpo-management-console.png` | Group Policy Management Console |
+| `45-gpo-organizational-unit-links.png` | GPO links on the IT-Computers OU |
+| `46-gpo-defender-baseline.png` | Microsoft Defender PUA policy |
+| `47-gpo-security-audit.png` | Advanced Audit Policy configuration |
+| `48-gpo-windows-update.png` | Windows Update GPO |
+| `49-gpo-powershell-list.png` | GPO inventory through PowerShell |
+| `50-gpo-resultant-policy.png` | Applied computer policies from gpresult |
 
-Only include screenshots that reflect the actual configuration and tests performed.
+Only include screenshots that reflect the actual configuration.
 
-## 9. Summary
+## 10. Summary
 
-An SMB file share was configured on Windows Server 2022 using the path `C:\Shares\IT-Share`.
+Group Policy provides centralized management of Windows computer settings in the `contoso.local` domain.
 
-The share contains separate folders for Public, Helpdesk, and Admin access.
+The lab includes policies for Microsoft Defender, security auditing, Windows Update, and computer configuration.
 
-Share Permissions and NTFS Permissions were configured to demonstrate layered access control.
+The Defender PUA protection setting was changed to Block mode and verified on the domain-joined Windows test computer.
 
-PowerShell and graphical administration tools were used to manage and verify the file server configuration.
+GPOs are managed through Group Policy Management Console and PowerShell. Their application is verified using `gpresult`, while individual security settings are checked directly on the target computer.
