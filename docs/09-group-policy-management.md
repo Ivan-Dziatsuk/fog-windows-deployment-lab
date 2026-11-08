@@ -123,7 +123,7 @@ Get-MpPreference |
     Select-Object PUAProtection
 ```
 
-Expected value:
+Observed configuration:
 
 | Value | Meaning |
 |---|---|
@@ -131,7 +131,9 @@ Expected value:
 | 1 | Block |
 | 2 | Audit |
 
-The observed configuration changed from Audit (`2`) to Block (`1`).
+The PUA protection setting was changed from Audit (`2`) to Block (`1`) through Group Policy.
+
+The effective value can be checked with `Get-MpPreference`. Group Policy Results can additionally be used to identify the policy applied to the computer.
 
 ## 5. GPO - Security Audit
 
@@ -364,5 +366,7 @@ Only include screenshots that reflect the actual configuration.
 Group Policy provides centralized management of Windows computer settings in the `contoso.local` domain.
 
 The lab includes policies for Microsoft Defender, security auditing, Windows Update, and computer configuration.
+
+The Defender PUA protection setting was changed to Block mode and verified on the domain-joined Windows test computer.
 
 GPOs are managed through Group Policy Management Console and PowerShell. Their application is verified using `gpresult`, while individual security settings are checked directly on the target computer.
