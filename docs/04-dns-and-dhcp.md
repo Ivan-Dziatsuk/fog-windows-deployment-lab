@@ -1,88 +1,79 @@
 # DNS and DHCP Configuration
 
-## 1. Overview
+![DNS](https://img.shields.io/badge/DNS-DC01-0969DA?style=flat-square)
+![DHCP](https://img.shields.io/badge/DHCP-LABNET-238636?style=flat-square)
+![Active Directory](https://img.shields.io/badge/DOMAIN-contoso.local-0078D4?style=flat-square)
+![Network](https://img.shields.io/badge/NETWORK-192.168.10.0%2F24-238636?style=flat-square)
 
-DNS and DHCP are essential network services in the lab environment.
+## Overview
 
-Both services run on the Windows Server 2022 domain controller `DC01`.
+Both DNS and DHCP run on DC01 (Windows Server 2022). They provide the network services needed by the domain computers.
 
-- **DNS (Domain Name System)** resolves hostnames to IP addresses and provides Active Directory service records.
-- **DHCP (Dynamic Host Configuration Protocol)** automatically assigns IP addresses and network configuration to client machines.
+DNS resolves computer names and maintains the service records required by Active Directory. DHCP assigns IP addresses and provides clients with their network configuration.
 
-These services allow domain computers to discover the domain controller and communicate with other lab machines.
+Keeping both services on the domain controller makes it easier to manage the lab from one place.
 
-## 2. Network Configuration
+## Network Configuration
 
-### DNS Information
+The internal network uses the following configuration:
 
 | Parameter | Value |
 |---|---|
 | DNS Server | DC01 |
-| DNS Server IP | `192.168.10.10` |
-| Forward Lookup Zone | `contoso.local` |
-| Reverse Lookup Zone | `10.168.192.in-addr.arpa` |
-| FOG01 IP | `192.168.10.20` |
+| DNS Server IP | 192.168.10.10 |
+| Forward Lookup Zone | contoso.local |
+| Reverse Lookup Zone | 10.168.192.in-addr.arpa |
+| FOG01 Internal IP | 192.168.10.20 |
+| DHCP Scope | LABNET |
+| Address Range | 192.168.10.100 – 192.168.10.200 |
+| Subnet Mask | 255.255.255.0 |
 
-### DHCP Scope Information
-
-| Parameter | Value |
-|---|---|
-| Scope Name | LABNET |
-| Network | `192.168.10.0/24` |
-| Start IP | `192.168.10.100` |
-| End IP | `192.168.10.200` |
-| Subnet Mask | `255.255.255.0` |
-| DNS Server | `192.168.10.10` |
-| DNS Domain | `contoso.local` |
-
-## 3. DNS Configuration
-
-### 3.1 GUI Configuration
-
-Open DNS Manager:
-
-1. Open Server Manager.
-2. Select Tools.
-3. Click DNS.
-4. Expand `DC01`.
-5. Expand Forward Lookup Zones.
-6. Open `contoso.local`.
+## DNS Configuration
 
 ### Forward Lookup Zone
 
-The forward lookup zone contains DNS records for domain computers and services.
+The forward lookup zone contoso.local contains DNS records for the domain and lab servers.
 
-Important records include:
+Some of the important records are:
 
 | Hostname | IP Address | Record Type |
 |---|---|---|
-| DC01 | `192.168.10.10` | A |
-| FOG01 | `192.168.10.20` | A |
-| Client hostnames | DHCP-assigned addresses | A |
+| DC01 | 192.168.10.10 | A |
+| FOG01 | 192.168.10.20 | A |
+| Windows client hostnames | DHCP-assigned addresses | A |
 
-Active Directory also registers service records, including LDAP and Kerberos SRV records.
+Active Directory also maintains service records (SRV) used by domain clients to locate services such as LDAP and Kerberos.
 
-### Create an A Record
+### Managing DNS Through DNS Manager
 
-1. Open Forward Lookup Zones.
-2. Right-click `contoso.local`.
-3. Select New Host (A or AAAA).
-4. Enter the computer name.
-5. Enter its IPv4 address.
-6. Optionally select Create associated pointer (PTR) record.
-7. Click Add Host.
+To open DNS Manager:
 
-Only create records that do not already exist.
+1. Open Server Manager on DC01.
+2. Select Tools → DNS.
+3. Expand DC01.
+4. Expand Forward Lookup Zones.
+5. Select contoso.local.
+
+To create a new A record:
+
+1. Right-click contoso.local.
+2. Select New Host (A or AAAA).
+3. Enter the computer name.
+4. Enter its IPv4 address.
+5. Optionally select Create associated pointer (PTR) record.
+6. Click Add Host.
+
+I only create records that do not already exist, to avoid duplicate entries.
 
 ### Reverse Lookup Zone
 
-A reverse lookup zone resolves IP addresses to hostnames.
+The reverse lookup zone is used to resolve IP addresses back to hostnames.
 
-The lab uses:
+For the 192.168.10.0/24 network, the zone is:
 
-`10.168.192.in-addr.arpa`
+10.168.192.in-addr.arpa
 
-To create the zone:
+To create it through DNS Manager:
 
 1. Right-click Reverse Lookup Zones.
 2. Select New Zone.
@@ -90,33 +81,33 @@ To create the zone:
 4. Enable Active Directory integration if offered.
 5. Select the appropriate replication scope.
 6. Choose IPv4 Reverse Lookup Zone.
-7. Enter network ID `192.168.10`.
+7. Enter the network ID 192.168.10.
 8. Complete the wizard.
 
-### Create a PTR Record
+### PTR Records
 
 A PTR record maps an IP address to a hostname.
 
-The lab contains a PTR record for:
+The lab has a PTR record for the domain controller:
 
 | IP Address | Hostname |
 |---|---|
-| `192.168.10.10` | `DC01.contoso.local` |
+| 192.168.10.10 | DC01.contoso.local |
 
-To create it:
+To create a PTR record:
 
 1. Open the reverse lookup zone.
 2. Right-click the zone.
 3. Select New Pointer (PTR).
-4. Enter the last octet of the IP address: `10`.
-5. Enter `DC01.contoso.local`.
+4. Enter the last octet of the IP address: 10.
+5. Enter DC01.contoso.local.
 6. Confirm the operation.
 
-## 4. DNS PowerShell Configuration
+## DNS PowerShell Commands
 
-Run these commands on `DC01` using an elevated PowerShell session.
+I also use the DNS Server PowerShell module to inspect and manage records on DC01.
 
-### Verify DNS Zones
+### List DNS Zones
 
 ```powershell
 Get-DnsServerZone |
@@ -132,7 +123,7 @@ Get-DnsServerResourceRecord -ZoneName "contoso.local" |
 
 ### Create an A Record
 
-Example for FOG01, if the record does not already exist:
+Example for FOG01, only if the record does not already exist:
 
 ```powershell
 Add-DnsServerResourceRecordA `
@@ -141,7 +132,7 @@ Add-DnsServerResourceRecordA `
     -IPv4Address "192.168.10.20"
 ```
 
-### Verify Reverse Lookup Records
+### Display Reverse Lookup Records
 
 ```powershell
 Get-DnsServerResourceRecord `
@@ -150,7 +141,7 @@ Get-DnsServerResourceRecord `
 
 ### Create a PTR Record
 
-Example for DC01, if the record does not already exist:
+Example for DC01, only if the record does not already exist:
 
 ```powershell
 Add-DnsServerResourceRecordPtr `
@@ -159,28 +150,47 @@ Add-DnsServerResourceRecordPtr `
     -PtrDomainName "DC01.contoso.local"
 ```
 
-## 5. DHCP Configuration
+## DHCP Configuration
 
-### 5.1 GUI Configuration
+DHCP runs on DC01 and provides IP addresses to machines connected to the internal network.
 
-Open DHCP Manager:
+The main scope is named LABNET.
+
+### Scope Configuration
+
+| Parameter | Value |
+|---|---|
+| Scope Name | LABNET |
+| Network | 192.168.10.0/24 |
+| Start IP | 192.168.10.100 |
+| End IP | 192.168.10.200 |
+| Subnet Mask | 255.255.255.0 |
+| DNS Server | 192.168.10.10 |
+| DNS Domain | contoso.local |
+
+### Managing DHCP Through DHCP Manager
+
+To open DHCP Manager:
 
 1. Open Server Manager.
-2. Select Tools.
-3. Click DHCP.
-4. Expand `DC01`.
-5. Expand IPv4.
-6. Open the `LABNET` scope.
+2. Select Tools → DHCP.
+3. Expand DC01.
+4. Expand IPv4.
+5. Open the LABNET scope.
 
-### Address Pool
+The DHCP console contains several useful sections:
 
-The DHCP address pool defines the range of addresses available to clients.
+- Address Pool — defines the range of available IP addresses.
+- Address Leases — shows addresses currently assigned to clients.
+- Scope Options — contains additional network configuration distributed to clients.
 
-Configured range:
+### DHCP Address Pool
 
-`192.168.10.100 – 192.168.10.200`
+The configured address range is:
 
-To view it:
+192.168.10.100 – 192.168.10.200
+
+To view the pool:
 
 1. Expand IPv4.
 2. Expand LABNET.
@@ -188,28 +198,28 @@ To view it:
 
 ### Address Leases
 
-Address Leases displays IP addresses currently assigned to DHCP clients.
+Address Leases displays the IP addresses currently assigned to DHCP clients.
 
-To view leases:
+To view the leases:
 
 1. Expand LABNET.
 2. Select Address Leases.
-3. Review assigned IP addresses, hostnames, and lease information.
+3. Review assigned addresses, hostnames, and lease information.
 
 ### Scope Options
 
-Scope Options define additional network settings distributed to clients.
-
-The following options are configured:
+The following options are configured for the LABNET scope:
 
 | Option | Name | Value |
 |---|---|---|
-| 006 | DNS Servers | `192.168.10.10` |
-| 015 | DNS Domain Name | `contoso.local` |
-| 066 | Boot Server Host Name | `192.168.10.20` |
-| 067 | Bootfile Name | `undionly.kpxe` |
+| 006 | DNS Servers | 192.168.10.10 |
+| 015 | DNS Domain Name | contoso.local |
+| 066 | Boot Server Host Name | 192.168.10.20 |
+| 067 | Bootfile Name | undionly.kpxe |
 
-Options 066 and 067 are used for PXE network booting in the FOG deployment environment.
+Options 006 and 015 provide the DNS settings used by clients.
+
+Options 066 and 067 provide the information required for PXE booting through FOG.
 
 To view the settings:
 
@@ -219,23 +229,27 @@ To view the settings:
 
 ### DHCP Server Bindings
 
-DHCP must be bound to the network interface connected to the lab network.
+DHCP must be enabled on the network interface connected to the internal lab network.
 
-The lab uses:
+The interface used in this lab is:
 
-- Interface: `Ethernet 2`
-- IP address: `192.168.10.10`
-- DHCP Binding: Enabled
+| Parameter | Value |
+|---|---|
+| Interface | Ethernet 2 |
+| IP Address | 192.168.10.10 |
+| DHCP Binding | Enabled |
 
-To view the configuration:
+To check the configuration:
 
-1. Right-click the DHCP server `DC01`.
+1. Right-click the DHCP server DC01.
 2. Select Properties.
 3. Open the Advanced tab.
 4. Click Bindings.
-5. Verify that the lab network interface is enabled.
+5. Verify that the internal network interface is enabled.
 
-## 6. DHCP PowerShell Configuration
+## DHCP PowerShell Commands
+
+The DHCP Server PowerShell module can be used to manage the scope and its options.
 
 ### Display DHCP Scopes
 
@@ -245,7 +259,7 @@ Get-DhcpServerv4Scope
 
 ### Create a DHCP Scope
 
-Example configuration for a new scope:
+The following example creates LABNET only if the scope does not already exist.
 
 ```powershell
 $Scope = Get-DhcpServerv4Scope `
@@ -267,7 +281,7 @@ else {
 
 ### Configure DHCP Scope Options
 
-These commands configure the options for the LABNET scope:
+These commands configure the DNS and PXE options for LABNET.
 
 ```powershell
 $ScopeId = "192.168.10.0"
@@ -295,7 +309,7 @@ Set-DhcpServerv4OptionValue `
     -Value "undionly.kpxe"
 ```
 
-These commands change the scope configuration. Run them only when the values need to be configured or corrected.
+These commands modify the existing scope options. Use them when configuring or correcting the values, not just for viewing the current settings.
 
 ### Display DHCP Scope Options
 
@@ -315,43 +329,43 @@ Get-DhcpServerv4Lease -ScopeId "192.168.10.0"
 Get-DhcpServerv4Binding
 ```
 
-## 7. Verification and Troubleshooting
+## DNS and DHCP Troubleshooting
 
-### Verify DNS Resolution
+### Check DNS Resolution
 
-Run these commands from a machine using the lab DNS server:
+Run these commands from a machine using DC01 as its DNS server.
 
 ```powershell
 nslookup DC01.contoso.local
 nslookup FOG01.contoso.local
 ```
 
-To check a reverse lookup:
+To check reverse resolution:
 
 ```powershell
 nslookup -type=PTR 192.168.10.10
 ```
 
-### Verify Active Directory SRV Records
+### Check Active Directory SRV Records
 
 ```powershell
 nslookup -type=SRV _ldap._tcp.dc._msdcs.contoso.local
 ```
 
-This checks whether the domain controller's LDAP service record can be found through DNS.
+This checks whether the client can locate the domain controller's LDAP service through DNS.
 
-### Verify Client Network Configuration
+### Check Client Network Configuration
 
 ```powershell
 ipconfig /all
 ```
 
-Check:
+Check that:
 
-- IPv4 address belongs to `192.168.10.0/24`.
-- Subnet mask is `255.255.255.0`.
-- DNS server is `192.168.10.10`.
-- DNS suffix is `contoso.local`.
+- The IPv4 address belongs to 192.168.10.0/24.
+- The subnet mask is 255.255.255.0.
+- The DNS server is 192.168.10.10.
+- The DNS suffix is contoso.local.
 
 ### Renew a DHCP Lease
 
@@ -360,9 +374,9 @@ ipconfig /release
 ipconfig /renew
 ```
 
-These commands release and request a DHCP address. Do not run them during remote access if losing the network connection could interrupt your session.
+These commands release the current address and request a new DHCP configuration.
 
-### Flush DNS Cache
+### Clear the DNS Cache
 
 ```powershell
 ipconfig /flushdns
@@ -370,32 +384,34 @@ ipconfig /flushdns
 
 This clears the local DNS resolver cache.
 
-## 8. Screenshots
+## Screenshots
 
-The following screenshots document the DNS and DHCP configuration:
+The following screenshots document the DNS and DHCP configuration.
 
 ### DHCP
 
 | Screenshot | Description |
 |---|---|
-| `06-dhcp-address-pool.png` | DHCP address pool |
-| `07-dhcp-address-leases.png` | Active DHCP leases |
-| `08-dhcp-scope-options.png` | DHCP scope options |
-| `09-dhcp-server-bindings.png` | DHCP interface bindings |
+| 06-dhcp-address-pool.png | DHCP address pool |
+| 07-dhcp-address-leases.png | Active DHCP leases |
+| 08-dhcp-scope-options.png | DHCP scope options |
+| 09-dhcp-server-bindings.png | DHCP interface bindings |
 
 ### DNS
 
 | Screenshot | Description |
 |---|---|
-| `10-dns-forward-lookup-zone.png` | Forward lookup zone |
-| `11-dns-host-records.png` | DNS A records |
-| `12-dns-srv-records.png` | Active Directory SRV records |
-| `13-dns-resolution-tests.png` | DNS resolution tests |
+| 10-dns-forward-lookup-zone.png | Forward lookup zone |
+| 11-dns-host-records.png | DNS A records |
+| 12-dns-srv-records.png | Active Directory SRV records |
+| 13-dns-resolution-tests.png | DNS resolution tests |
 
-## 9. Summary
+Only include screenshots that show the actual lab configuration.
 
-DNS and DHCP provide the foundation for network communication and domain services in the lab.
+## Summary
 
-DNS resolves hostnames and provides Active Directory service records. DHCP automatically assigns IP addresses and distributes DNS and PXE boot configuration.
+DC01 provides both DNS and DHCP services for the internal network.
 
-Both services are managed through graphical administration tools and PowerShell.
+DNS handles hostname resolution and Active Directory service records. DHCP assigns addresses to clients and provides the configuration needed for DNS and PXE boot.
+
+I use DNS Manager and DHCP Manager for graphical administration, and PowerShell for configuration, inspection, and troubleshooting.
