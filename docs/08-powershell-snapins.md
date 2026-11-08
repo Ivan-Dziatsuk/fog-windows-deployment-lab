@@ -245,13 +245,9 @@ The following screenshots document the Snapin configuration and tests.
 
 | Screenshot | Description |
 |---|---|
-| 37-fog-snapin-management.png | FOG Snapin Management interface |
-| 38-fog-test-snapin.png | Test File Snapin configuration |
-| 39-fog-test-snapin-result.png | Created test file on Windows client |
-| 40-fog-inventory-snapin.png | Windows Inventory Snapin configuration |
-| 41-fog-inventory-report.png | Generated Windows inventory report |
-| 42-fog-software-deployment-test.png | Software Deployment experiment |
-| 43-fog-hostname-changer-log.png | Hostname Changer troubleshooting message |
+| 37-fog-inventory-task.png | FOG Inventory Snapin task running on the Windows client |
+| 38-fog-inventory-success.png | Successful completion of the Inventory Snapin task |
+| 39-fog-inventory-report.png | PowerShell output displaying the generated inventory report using Get-Content |
 
 Only include screenshots that actually exist and reflect the corresponding tests.
 
