@@ -411,12 +411,12 @@ The following screenshots document the initial FOG installation and configuratio
 
 | Screenshot | Description |
 |---|---|
-| 14-fog-server-network.png | Ubuntu network configuration |
-| 15-fog-installation.png | FOG installation process |
-| 16-fog-web-interface.png | FOG management interface |
-| 17-fog-server-dashboard.png | FOG dashboard |
-| 18-fog-version.png | Installed FOG version |
-| 19-fog-certificate.png | FOG HTTPS certificate information |
+| 14-fog-dashboard.png | FOG dashboard — main management interface |
+| 15-fog-host-management.png | Host Management — computer management |
+| 16-fog-image-management.png | Image Management — Windows image management |
+| 17-fog-storage-nodes-management.png | Storage Nodes Management — image storage management |
+| 18-fog-snapin-management.png | Snapin Management — software packages and deployment tasks |
+| 19-fog-image-storage.png | Windows 11 image directory contents and total disk space usage |
 
 Only include screenshots that actually exist in the repository.
 
