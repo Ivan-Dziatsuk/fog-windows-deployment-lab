@@ -232,6 +232,11 @@ This demonstrated the complete workflow:
 
 After deployment, WIN11-TEST was also used for further Active Directory and Group Policy practice. Domain joining was performed manually as a separate administration task.
 
+| Screenshot | Description |
+|---|---|
+| 22-image-deployment-pxe.png | Windows 11 image deployment through PXE network boot |
+| 23-image-deployment-verification.png | PowerShell verification of the deployed Windows 11 installation |
+
 ## Summary
 
 I used FOG Project to capture a prepared Windows 11 Pro installation from WIN11-IMAGE and deploy it to WIN11-TEST.
