@@ -1,35 +1,32 @@
 # SMB File Server Configuration
 
-## 1. Overview
+![SMB](https://img.shields.io/badge/FILE_SHARING-SMB-0078D4?style=flat-square)
+![NTFS](https://img.shields.io/badge/PERMISSIONS-NTFS-0969DA?style=flat-square)
+![Active Directory](https://img.shields.io/badge/ACCESS_CONTROL-Active_Directory-238636?style=flat-square)
+![Windows Server](https://img.shields.io/badge/SERVER-DC01-0078D4?style=flat-square)
 
-SMB (Server Message Block) is a network file-sharing protocol used to provide access to shared folders and files.
+## Overview
 
-In this lab, Windows Server 2022 (`DC01`) is configured as a file server.
+I configured an SMB file share on DC01 to practice managing access to shared folders through Active Directory security groups.
 
-The shared folder is used to demonstrate centralized file access management through:
+The share contains three separate folders: Public, Helpdesk, and Admin. Each folder has its own NTFS permissions, so access can be controlled according to the user's group membership.
 
-- SMB Share Permissions
-- NTFS Permissions
-- Active Directory security groups
-- Permission inheritance
-- Effective Access verification
+During this part of the lab, I also worked with share permissions, NTFS ACLs, inheritance, and Effective Access.
 
-## 2. File Server Information
+## File Server Configuration
 
 | Parameter | Value |
 |---|---|
-| File Server | `DC01` |
+| File Server | DC01 |
 | Operating System | Windows Server 2022 |
-| Server IP | `192.168.10.10` |
-| Shared Folder | `C:\Shares\IT-Share` |
-| Share Name | `IT-Share` |
-| UNC Path | `\\DC01\IT-Share` |
+| Server IP | 192.168.10.10 |
+| Shared Folder | C:\Shares\IT-Share |
+| Share Name | IT-Share |
+| UNC Path | \\DC01\IT-Share |
 
-### Folder Structure
+The shared directory has the following structure:
 
-The shared directory contains three subfolders:
-
-```text id="smbtree"
+```text
 C:\Shares\IT-Share
 │
 ├── Public
@@ -39,13 +36,11 @@ C:\Shares\IT-Share
 └── Admin
 ```
 
-Each folder has a separate access configuration.
+## Share Permissions
 
-## 3. Share Permissions
+Share permissions control access when users connect to a folder over the network.
 
-Share Permissions control access when users connect to a folder through the network.
-
-The following permissions are configured for the `IT-Share` SMB share:
+I configured the following permissions for the IT-Share share:
 
 | Security Principal | Share Permission |
 |---|---|
@@ -54,86 +49,81 @@ The following permissions are configured for the `IT-Share` SMB share:
 | IT-Admins | Full Control |
 | Domain Admins | Full Control |
 
-### Configure Share Permissions Using GUI
+### Managing Share Permissions Through GUI
 
-1. Open Server Manager.
+1. Open Server Manager on DC01.
 2. Select File and Storage Services.
-3. Select Shares.
-4. Locate `IT-Share`.
+3. Open Shares.
+4. Locate IT-Share.
 5. Right-click the share and select Properties.
 6. Open the Permissions section.
 7. Select Customize permissions.
 8. Open the Share tab.
-9. Review or configure the required groups and permissions.
+9. Review or configure the required groups.
 10. Apply the changes.
 
-### Share Permission Levels
+### Permission Levels
 
-| Permission | Description |
+| Permission | What It Allows |
 |---|---|
 | Read | View files and folders |
 | Change | Read, create, modify, and delete files |
-| Full Control | Includes Read and Change permissions and allows management of share permissions |
+| Full Control | Includes Change permissions and additional access rights |
 
-Share Permissions apply to network access through the SMB share. They do not replace NTFS permissions.
+Share permissions apply to network connections. They do not replace NTFS permissions configured on the filesystem.
 
-## 4. NTFS Permissions
+## NTFS Permissions
 
-NTFS permissions control access to files and folders on the filesystem.
+NTFS permissions control access directly on files and folders. They apply both to local access and to access through an SMB share.
 
-Unlike Share Permissions, NTFS permissions also apply to local access.
+For this lab, I separated access between the three folders according to department groups.
 
-The lab uses separate access permissions for each subfolder.
+### Configured Permissions
 
-### Configured NTFS Permissions
-
-| Folder | Security Principal | NTFS Permission |
+| Folder | Security Group | NTFS Permission |
 |---|---|---|
 | Public | Employees | Modify |
 | Helpdesk | Helpdesk | Modify |
 | Admin | IT-Admins | Full Control |
 
-These permissions demonstrate how access can be separated according to department responsibilities.
+### Managing NTFS Permissions Through GUI
 
-### Configure NTFS Permissions Using GUI
-
-1. Open File Explorer on `DC01`.
-2. Navigate to `C:\Shares\IT-Share`.
+1. Open File Explorer on DC01.
+2. Navigate to C:\Shares\IT-Share.
 3. Right-click the required folder.
 4. Select Properties.
 5. Open the Security tab.
-6. Select Advanced for detailed permission management.
+6. Select Advanced.
 7. Review the existing permission entries.
 8. Add or modify the required security group.
 9. Select the appropriate permission level.
 10. Apply the changes.
 
-Repeat this process for the `Public`, `Helpdesk`, and `Admin` folders.
+I repeated this process for Public, Helpdesk, and Admin.
 
 ### Permission Inheritance
 
-NTFS supports permission inheritance.
+Windows can inherit NTFS permissions from parent folders. This means that permissions configured on a parent directory may also apply to its files and subfolders.
 
-Permissions configured on a parent folder can be inherited by its child files and folders.
+Inheritance can be managed through:
 
-Inheritance can be reviewed and managed through:
+Folder Properties → Security → Advanced
 
-`Folder Properties → Security → Advanced`
+It is important to check inherited and explicit permissions before changing an ACL. Adding a new Allow entry does not automatically remove other permissions.
 
-The actual inherited and explicit permission entries should be checked before modifying them.
+## PowerShell Configuration
 
-**Important:** The permissions listed above describe the configured group entries. Other inherited permissions, group memberships, and explicit Deny entries can also affect a user's effective access.
+I also used PowerShell to create the directory structure, configure the SMB share, and manage NTFS permissions.
 
-## 5. PowerShell Configuration
+Run these commands on DC01 in an elevated PowerShell session.
 
-Run these commands on `DC01` using an elevated PowerShell session.
+### Create the Folder Structure
 
-### Create the Shared Folder Structure
-
-The following commands create the directory structure if it does not already exist.
-
-```powershell id="smbfolders"
+```powershell
 $BasePath = "C:\Shares\IT-Share"
+
+New-Item -Path $BasePath -ItemType Directory -Force |
+    Out-Null
 
 $Folders = @(
     "$BasePath\Public",
@@ -147,11 +137,13 @@ foreach ($Folder in $Folders) {
 }
 ```
 
-### Create an SMB Share
+The -Force parameter allows the script to reuse existing directories without failing when they are already present.
 
-Example configuration for a new share:
+### Create the SMB Share
 
-```powershell id="smbcreate"
+The following is an example for creating the share with the configured access groups.
+
+```powershell
 New-SmbShare `
     -Name "IT-Share" `
     -Path "C:\Shares\IT-Share" `
@@ -159,26 +151,28 @@ New-SmbShare `
     -FullAccess "CONTOSO\IT-Admins", "CONTOSO\Domain Admins"
 ```
 
-This command creates a new share. Do not run it if `IT-Share` already exists.
+This command creates a new SMB share. Do not run it if IT-Share already exists.
 
-### Display SMB Shares
+### Display Existing Shares
 
-```powershell id="smbdisplay"
+```powershell
 Get-SmbShare |
     Select-Object Name, Path, Description
 ```
 
 ### Display Share Permissions
 
-```powershell id="smbaccess"
+```powershell
 Get-SmbShareAccess -Name "IT-Share"
 ```
 
-### Configure NTFS Permissions
+## Configuring NTFS Permissions with icacls
 
-The following commands add the specified permissions to the existing folders.
+The icacls utility can be used to modify and inspect NTFS Access Control Lists.
 
-```powershell id="smbacl"
+The following commands add the required group permissions to the existing folders.
+
+```powershell
 # Employees: Modify access to Public
 icacls "C:\Shares\IT-Share\Public" `
     /grant "CONTOSO\Employees:(OI)(CI)M"
@@ -192,77 +186,81 @@ icacls "C:\Shares\IT-Share\Admin" `
     /grant "CONTOSO\IT-Admins:(OI)(CI)F"
 ```
 
-Explanation:
+### Understanding the icacls Parameters
 
 | Parameter | Meaning |
 |---|---|
-| `/grant` | Adds an Allow permission |
-| `(OI)` | Object Inherit — applies to files |
-| `(CI)` | Container Inherit — applies to subfolders |
-| `M` | Modify |
-| `F` | Full Control |
+| /grant | Adds an Allow permission |
+| (OI) | Object Inherit — applies to files |
+| (CI) | Container Inherit — applies to subfolders |
+| M | Modify |
+| F | Full Control |
 
-These commands add permissions; they do not remove other existing Allow or Deny entries. Review the resulting ACL before assuming these are the only permissions.
+These commands add permissions; they do not remove other existing Allow or Deny entries. Always inspect the resulting ACL before assuming that the listed groups are the only entries.
 
 ### Display NTFS Permissions
 
-```powershell id="smbshowacl"
+```powershell
 icacls "C:\Shares\IT-Share\Public"
 icacls "C:\Shares\IT-Share\Helpdesk"
 icacls "C:\Shares\IT-Share\Admin"
 ```
 
-## 6. Verification
+## Testing the Share
+
+After configuring the share and folder permissions, access can be tested from a Windows client.
 
 ### Verify the SMB Share
 
-```powershell id="smbverify"
+Run on DC01:
+
+```powershell
 Get-SmbShare -Name "IT-Share" |
     Select-Object Name, Path, Description
 ```
 
-### Verify Share Permissions
+### Verify Share Access Rules
 
-```powershell id="smbverifyaccess"
+```powershell
 Get-SmbShareAccess -Name "IT-Share"
 ```
 
-### Verify NTFS Permissions
+### Verify NTFS ACLs
 
-```powershell id="smbverifyacl"
+```powershell
 icacls "C:\Shares\IT-Share"
 icacls "C:\Shares\IT-Share\Public"
 icacls "C:\Shares\IT-Share\Helpdesk"
 icacls "C:\Shares\IT-Share\Admin"
 ```
 
-### Test Network Access
-
-From a Windows client, use:
-
-```powershell id="smbtest"
-Test-Path "\\DC01\IT-Share"
-```
-
-Display the shared folder contents:
-
-```powershell id="smbcontents"
-Get-ChildItem "\\DC01\IT-Share"
-```
-
-These commands test access using the current Windows security context. A failed `Test-Path` does not by itself distinguish between a missing path and an access or connectivity problem.
-
-### Connect to the Share
+### Access the Share from a Windows Client
 
 Open File Explorer and enter:
 
-```text id="smbunc"
+```text
 \\DC01\IT-Share
 ```
 
-Alternatively, map the shared folder to a network drive:
+The same location can be checked through PowerShell:
 
-```powershell id="smbmap"
+```powershell
+Test-Path "\\DC01\IT-Share"
+```
+
+To list the shared folders:
+
+```powershell
+Get-ChildItem "\\DC01\IT-Share"
+```
+
+These commands use the current Windows security context. A failed access test may indicate a permissions problem, a missing path, or a network connectivity issue.
+
+### Map the Share as a Network Drive
+
+I can also connect to the share using a persistent PowerShell drive:
+
+```powershell
 New-PSDrive `
     -Name "IT" `
     -PSProvider FileSystem `
@@ -270,74 +268,70 @@ New-PSDrive `
     -Persist
 ```
 
-## 7. Effective Access and Troubleshooting
+The share then becomes available as the IT: drive in File Explorer.
 
-Windows evaluates both Share Permissions and NTFS Permissions when a user accesses a folder through an SMB share.
+## Effective Access and Troubleshooting
 
-The effective network access is limited by the permissions granted at both layers.
+When a user accesses an SMB share over the network, Windows evaluates both Share Permissions and NTFS Permissions.
+
+The effective network access is limited by the more restrictive result of these two permission layers.
 
 For example:
 
-- Share permission: Change
-- NTFS permission: Modify
-- Effective access: Modify-level file access, limited by both permission layers.
+| Permission Layer | Permission |
+|---|---|
+| Share | Change |
+| NTFS | Modify |
+| Effective Access | Modify-level file access |
 
-An Allow permission at one layer cannot override a restriction imposed by the other layer.
+An Allow entry in one layer cannot override a restriction imposed by the other layer.
 
-### Factors Affecting Effective Access
+### What Can Affect Effective Access?
 
 - Active Directory group membership.
 - Inherited NTFS permissions.
 - Explicit Allow and Deny entries.
-- Share-level permissions.
-- The user's current Windows logon security token.
+- SMB Share Permissions.
+- The user's current Windows logon token.
 
-A user who has recently been added to a security group may need to sign out and sign in again to refresh the group membership in the logon token.
+When a user is added to a security group, they may need to sign out and sign in again before their new group membership is reflected in the logon token.
 
-### Verify Effective Access Using GUI
+### Check Effective Access Through GUI
 
 1. Open the folder Properties.
 2. Select the Security tab.
 3. Open Advanced.
 4. Select Effective Access.
-5. Select a user or group.
+5. Choose the required user or group.
 6. Click View effective access.
 7. Review the resulting permissions.
 
-### Important Troubleshooting Checks
+This helps identify why a user can or cannot access a particular folder.
 
-When a user cannot access a shared folder, check:
+## Screenshots
 
-1. Whether the user belongs to the correct Active Directory security group.
-2. Whether the SMB share permissions allow access.
-3. Whether NTFS permissions allow access.
-4. Whether inheritance or explicit Deny permissions affect access.
-5. Whether the user has refreshed their logon session after group membership changes.
-
-## 8. Screenshots
-
-The following screenshots document the SMB file server configuration:
+The following screenshots document the SMB configuration and permission management.
 
 | Screenshot | Description |
 |---|---|
-| `51-smb-folder-structure.png` | IT-Share folder structure |
-| `52-smb-share-properties.png` | SMB share properties |
-| `53-smb-share-permissions.png` | Share permissions |
-| `54-smb-public-ntfs.png` | Public folder NTFS permissions |
-| `55-smb-helpdesk-ntfs.png` | Helpdesk folder NTFS permissions |
-| `56-smb-admin-ntfs.png` | Admin folder NTFS permissions |
-| `57-smb-powershell-acl.png` | PowerShell ACL verification |
-| `58-smb-effective-access.png` | Effective Access configuration |
-| `59-smb-client-access.png` | Shared folder access from a Windows client |
+| 51-smb-folder-structure.png | IT-Share folder structure |
+| 52-smb-share-properties.png | SMB share properties |
+| 53-smb-share-permissions.png | Share permissions |
+| 54-smb-public-ntfs.png | Public folder NTFS permissions |
+| 55-smb-helpdesk-ntfs.png | Helpdesk folder NTFS permissions |
+| 56-smb-admin-ntfs.png | Admin folder NTFS permissions |
+| 57-smb-powershell-acl.png | PowerShell ACL verification |
+| 58-smb-effective-access.png | Effective Access configuration |
+| 59-smb-client-access.png | Shared folder access from a Windows client |
 
-Only include screenshots that reflect the actual configuration and tests performed.
+Only include screenshots that show the actual configuration and tests performed.
 
-## 9. Summary
+## Summary
 
-An SMB file share was configured on Windows Server 2022 using the path `C:\Shares\IT-Share`.
+I configured an SMB share on DC01 using C:\Shares\IT-Share.
 
-The share contains separate folders for Public, Helpdesk, and Admin access.
+The share contains separate folders for Public, Helpdesk, and Admin. Access is managed through Active Directory groups, SMB Share Permissions, and NTFS permissions.
 
-Share Permissions and NTFS Permissions were configured to demonstrate layered access control.
+I also practiced permission inheritance, ACL inspection with icacls, and Effective Access troubleshooting.
 
-PowerShell and graphical administration tools were used to manage and verify the file server configuration.
+This setup provides a practical example of managing shared resources and controlling access in a Windows domain environment.
