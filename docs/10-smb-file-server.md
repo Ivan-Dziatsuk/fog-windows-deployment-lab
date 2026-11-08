@@ -314,15 +314,8 @@ The following screenshots document the SMB configuration and permission manageme
 
 | Screenshot | Description |
 |---|---|
-| 51-smb-folder-structure.png | IT-Share folder structure |
-| 52-smb-share-properties.png | SMB share properties |
-| 53-smb-share-permissions.png | Share permissions |
-| 54-smb-public-ntfs.png | Public folder NTFS permissions |
-| 55-smb-helpdesk-ntfs.png | Helpdesk folder NTFS permissions |
-| 56-smb-admin-ntfs.png | Admin folder NTFS permissions |
-| 57-smb-powershell-acl.png | PowerShell ACL verification |
-| 58-smb-effective-access.png | Effective Access configuration |
-| 59-smb-client-access.png | Shared folder access from a Windows client |
+| 42-smb-share-permissions.png | Share permissions |
+| 43-smb-ntfs-permissions.png | NTFS security permissions configuration |
 
 Only include screenshots that show the actual configuration and tests performed.
 
