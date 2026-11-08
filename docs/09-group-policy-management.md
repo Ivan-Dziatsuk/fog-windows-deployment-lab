@@ -340,13 +340,8 @@ The following screenshots document the Group Policy configuration and testing:
 
 | Screenshot | Description |
 |---|---|
-| 44-gpo-management-console.png | Group Policy Management Console |
-| 45-gpo-organizational-unit-links.png | GPO links on the IT-Computers OU |
-| 46-gpo-defender-baseline.png | Microsoft Defender PUA policy |
-| 47-gpo-security-audit.png | Advanced Audit Policy configuration |
-| 48-gpo-windows-update.png | Windows Update GPO |
-| 49-gpo-powershell-list.png | GPO inventory through PowerShell |
-| 50-gpo-resultant-policy.png | Applied computer policies from gpresult |
+| 40-gpo-management-console.png | Group Policy Management Console |
+| 41-gpo-resultant-policy.png | Applied computer policies from gpresult |
 
 Only include screenshots that reflect the actual lab configuration.
 
