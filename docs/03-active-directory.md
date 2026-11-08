@@ -271,7 +271,6 @@ The following screenshots document the Active Directory configuration:
 | 02-ad-organizational-units.png | Organizational Unit structure |
 | 03-ad-users.png | Domain user accounts, including Client1 |
 | 04-ad-computers.png | Domain computer accounts |
-| 05-ad-powershell.png | PowerShell domain and OU verification |
 
 Only screenshots showing actual lab configuration should be included.
 
