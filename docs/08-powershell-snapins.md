@@ -4,18 +4,19 @@
 
 FOG Snapins provide a way to execute scripts and deploy files or applications to managed Windows computers.
 
-In this lab, PowerShell scripts are used to test remote execution and collect basic Windows system information.
+In this lab, PowerShell scripts are used to test remote task execution and collect basic Windows system information.
 
-The FOG Client communicates with the FOG server and processes assigned Snapin tasks.
+The FOG Client communicates with the FOG server and processes assigned Snapin tasks on the target computer.
 
 ### Environment Information
 
 | Parameter | Value |
 |---|---|
-| FOG Server | `FOG01` |
-| FOG Server IP | `192.168.10.20` |
-| FOG Project Version | `1.6.0-beta.5644` |
-| FOG Client Version | `0.13.0` |
+| FOG Server | FOG01 |
+| FOG Server IP | 192.168.10.20 |
+| FOG Project Version | 1.6.0 (build 5644) |
+| Installation Channel | Beta |
+| FOG Client Version | 0.13.0 |
 | Target OS | Windows 11 Pro |
 | Script Language | PowerShell |
 
@@ -34,13 +35,11 @@ The FOG Client communicates with the FOG server and processes assigned Snapin ta
 
 ### PowerShell Execution Settings
 
-The following execution command is used:
+The following execution configuration was used:
 
 ```text
 powershell.exe -ExecutionPolicy Bypass -NoProfile -File
 ```
-
-Explanation:
 
 | Parameter | Purpose |
 |---|---|
@@ -110,7 +109,7 @@ Get-Content "C:\FOG-Test\Result.txt"
 
 Expected result: the file exists and contains the success message, computer name, and execution date.
 
-**Lab result:** Successful.
+**Lab result: Successful.**
 
 ## 4. Windows Inventory Snapin
 
@@ -167,16 +166,16 @@ $Report | Format-List |
 
 | Information | CIM Class / Property |
 |---|---|
-| Computer name | `Win32_ComputerSystem.Name` |
-| Domain or workgroup | `Win32_ComputerSystem.Domain` |
-| Manufacturer | `Win32_ComputerSystem.Manufacturer` |
-| Model | `Win32_ComputerSystem.Model` |
-| CPU | `Win32_Processor.Name` |
-| Installed RAM | `Win32_ComputerSystem.TotalPhysicalMemory` |
-| Windows version | `Win32_OperatingSystem.Caption` |
-| Windows build | `Win32_OperatingSystem.BuildNumber` |
-| IP addresses | `Win32_NetworkAdapterConfiguration.IPAddress` |
-| Disk information | `Win32_LogicalDisk` |
+| Computer name | Win32_ComputerSystem.Name |
+| Domain or workgroup | Win32_ComputerSystem.Domain |
+| Manufacturer | Win32_ComputerSystem.Manufacturer |
+| Model | Win32_ComputerSystem.Model |
+| CPU | Win32_Processor.Name |
+| Installed RAM | Win32_ComputerSystem.TotalPhysicalMemory |
+| Windows version | Win32_OperatingSystem.Caption |
+| Windows build | Win32_OperatingSystem.BuildNumber |
+| IP addresses | Win32_NetworkAdapterConfiguration.IPAddress |
+| Disk information | Win32_LogicalDisk |
 
 ### Verification
 
@@ -192,7 +191,7 @@ Display the inventory report:
 Get-Content "C:\FOG-Inventory.txt"
 ```
 
-**Lab result:** Successful. The inventory report was generated on the Windows client.
+**Lab result: Successful.** The inventory report was generated on the Windows client.
 
 ## 5. Software Deployment Test
 
@@ -212,15 +211,7 @@ This verified that a Snapin could execute a PowerShell script, but it did not in
 
 This experiment is not considered a successful software installation deployment.
 
-## 6. Troubleshooting and Failed Experiments
-
-### 7-Zip Installation Snapin
-
-An attempt was made to install 7-Zip through a FOG Snapin.
-
-The installation did not complete successfully.
-
-The experiment is documented as unsuccessful. It is not claimed as a working software deployment solution.
+## 6. Troubleshooting
 
 ### FOG Hostname Changer
 
@@ -245,10 +236,14 @@ Domain joining is performed manually using PowerShell rather than through an aut
 Example:
 
 ```powershell
+$Credential = Get-Credential `
+    -UserName "contoso\Administrator" `
+    -Message "Enter domain credentials"
+
 Add-Computer `
     -DomainName "contoso.local" `
     -OUPath "OU=IT-Computers,DC=contoso,DC=local" `
-    -Credential "contoso\Administrator" `
+    -Credential $Credential `
     -Restart
 ```
 
@@ -281,6 +276,6 @@ Two successful use cases were demonstrated:
 - Creating a test file remotely through a Snapin.
 - Collecting basic Windows system information and generating an inventory report.
 
-Additional experiments with software installation and automatic hostname changes were unsuccessful and are documented as troubleshooting examples.
+The automatic hostname change experiment was unsuccessful and is documented as a troubleshooting example.
 
 Domain joining remains a separate manual procedure using PowerShell.
