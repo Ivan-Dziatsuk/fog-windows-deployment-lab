@@ -8,16 +8,16 @@ In this lab, PXE is used to start the FOG Project boot environment and perform n
 
 The PXE infrastructure consists of:
 
-- `DC01` — provides DHCP configuration.
-- `FOG01` — provides TFTP and FOG network boot services.
-- Windows client VM — acts as the PXE boot client.
+- **DC01** — provides DHCP configuration.
+- **FOG01** — provides TFTP and FOG network boot services.
+- **Windows client VM** — acts as the PXE boot client.
 
 ## 2. PXE Infrastructure
 
 | Component | Hostname | IP Address | Responsibility |
 |---|---|---|---|
-| DHCP Server | DC01 | `192.168.10.10` | Assigns IP addresses and PXE boot options |
-| PXE / TFTP Server | FOG01 | `192.168.10.20` | Provides the network boot file |
+| DHCP Server | DC01 | 192.168.10.10 | Assigns IP addresses and PXE boot options |
+| PXE / TFTP Server | FOG01 | 192.168.10.20 | Provides the network boot file |
 | PXE Client | Windows VM | DHCP | Starts network boot |
 
 ### DHCP PXE Options
@@ -26,25 +26,26 @@ The DHCP scope `LABNET` contains the following PXE settings:
 
 | Option | Name | Value |
 |---|---|---|
-| 066 | Boot Server Host Name | `192.168.10.20` |
-| 067 | Bootfile Name | `undionly.kpxe` |
+| 066 | Boot Server Host Name | 192.168.10.20 |
+| 067 | Bootfile Name | undionly.kpxe |
 
 The boot file `undionly.kpxe` is used for Legacy BIOS PXE booting.
 
-UEFI clients may require a different boot file. The configuration documented here is the one tested in this lab.
+UEFI clients may require a different boot file and DHCP configuration. The configuration documented here is the one tested in this lab.
 
 ## 3. PXE Boot Process
 
 The PXE boot process follows these steps:
 
 1. The client starts and requests network configuration using DHCP.
-2. `DC01` responds with an available IP address and network settings.
+2. DC01 responds with an available IP address and network settings.
 3. The client receives DHCP PXE options 066 and 067.
-4. The client contacts `FOG01` at `192.168.10.20`.
+4. The client contacts FOG01 at `192.168.10.20`.
 5. The client downloads `undionly.kpxe` using TFTP.
 6. The downloaded iPXE bootloader starts.
-7. iPXE communicates with the FOG server and loads the FOG boot menu.
-8. The administrator can select an available network boot action.
+7. iPXE communicates with the FOG server and retrieves the network boot configuration.
+8. The FOG boot menu appears.
+9. The administrator can select an available network boot action.
 
 ### Communication Flow
 
@@ -70,13 +71,15 @@ FOG01 - TFTP Server
 PXE Client
     |
     | iPXE starts
+    |
+    | Retrieves boot configuration
     v
 FOG Network Boot Menu
 ```
 
 ## 4. VirtualBox Client Configuration
 
-The Windows client VM must be connected to the same internal VirtualBox network as `DC01` and `FOG01`.
+The Windows client VM must be connected to the same internal VirtualBox network as DC01 and FOG01.
 
 ### Configure Network Adapter
 
@@ -98,11 +101,17 @@ The Windows client VM must be connected to the same internal VirtualBox network 
 5. Move Network above Hard Disk when testing PXE boot.
 6. Save the changes.
 
-The VM must use a firmware mode compatible with the configured network boot file.
+### Firmware Compatibility
+
+The current lab configuration uses `undionly.kpxe`, which is intended for Legacy BIOS PXE booting.
+
+The client VM must therefore use a compatible BIOS firmware configuration.
+
+UEFI network boot requires a different boot file and corresponding configuration.
 
 ## 5. DHCP Configuration
 
-DHCP is managed centrally on `DC01`.
+DHCP is managed centrally on DC01.
 
 The following options are configured at the `LABNET` scope level.
 
@@ -110,15 +119,15 @@ The following options are configured at the `LABNET` scope level.
 
 1. Open Server Manager.
 2. Select Tools → DHCP.
-3. Expand `DC01`.
+3. Expand DC01.
 4. Expand IPv4.
-5. Expand `LABNET`.
+5. Expand LABNET.
 6. Select Scope Options.
 7. Verify that options 066 and 067 contain the FOG server address and boot filename.
 
 ### PowerShell Configuration
 
-Run on `DC01` in an elevated PowerShell session.
+Run on DC01 in an elevated PowerShell session.
 
 ```powershell
 $ScopeId = "192.168.10.0"
@@ -138,9 +147,17 @@ Set-DhcpServerv4OptionValue `
 
 These commands change the existing DHCP scope options. They are included as configuration examples and do not need to be executed again when the settings are already correct.
 
+### Verify DHCP Options
+
+To display the configured options:
+
+```powershell
+Get-DhcpServerv4OptionValue -ScopeId $ScopeId
+```
+
 ## 6. TFTP Configuration
 
-TFTP (Trivial File Transfer Protocol) is used to transfer the initial network boot file from `FOG01` to the PXE client.
+TFTP (Trivial File Transfer Protocol) is used to transfer the initial network boot file from FOG01 to the PXE client.
 
 The boot file used in this lab is:
 
@@ -152,10 +169,10 @@ The default FOG TFTP directory is:
 
 ### Verify the Boot File
 
-Run on `FOG01`:
+Run on FOG01:
 
 ```bash
-ls -lh /tftpboot/undionly.kpxe
+sudo ls -lh /tftpboot/undionly.kpxe
 ```
 
 This checks whether the boot file exists in the TFTP directory.
@@ -163,7 +180,7 @@ This checks whether the boot file exists in the TFTP directory.
 ### Verify TFTP Service
 
 ```bash
-sudo systemctl status tftpd-hpa
+sudo systemctl status tftpd-hpa --no-pager
 ```
 
 To check whether a TFTP listener is present:
@@ -183,7 +200,7 @@ The PXE boot process was tested using a Windows virtual machine connected to the
 1. Start the PXE client VM.
 2. Select network boot if required.
 3. Observe the DHCP network configuration process.
-4. Verify that the client receives an address from the `LABNET` scope.
+4. Verify that the client receives an address from the LABNET scope.
 5. Observe the TFTP transfer of `undionly.kpxe`.
 6. Verify that iPXE starts.
 7. Confirm that the FOG network boot menu appears.
@@ -192,9 +209,9 @@ The PXE boot process was tested using a Windows virtual machine connected to the
 
 | Test | Expected Result | Lab Result |
 |---|---|---|
-| DHCP address assignment | Client receives an address from `LABNET` | Successful |
+| DHCP address assignment | Client receives an address from LABNET | Successful |
 | DHCP PXE options | Boot server and boot filename are provided | Configured |
-| TFTP boot file transfer | `undionly.kpxe` is downloaded | Successful |
+| TFTP boot file transfer | undionly.kpxe is downloaded | Successful |
 | iPXE startup | iPXE boot environment starts | Successful |
 | FOG boot menu | FOG menu is displayed | Successful |
 
@@ -227,11 +244,13 @@ Possible causes:
 - Client is connected to the wrong VirtualBox network.
 - DHCP service is unavailable.
 
-Useful commands on `DC01`:
+Useful commands on DC01:
 
 ```powershell
 Get-DhcpServerv4Scope
+
 Get-DhcpServerv4Binding
+
 Get-DhcpServerv4Lease -ScopeId "192.168.10.0"
 ```
 
@@ -244,11 +263,12 @@ Check:
 - The TFTP service is running.
 - The boot file exists in `/tftpboot`.
 
-Useful commands on `FOG01`:
+Useful commands on FOG01:
 
 ```bash
-sudo systemctl status tftpd-hpa
-ls -lh /tftpboot/undionly.kpxe
+sudo systemctl status tftpd-hpa --no-pager
+
+sudo ls -lh /tftpboot/undionly.kpxe
 ```
 
 ### FOG Boot Menu Does Not Appear
@@ -256,12 +276,19 @@ ls -lh /tftpboot/undionly.kpxe
 Check:
 
 - The iPXE bootloader starts successfully.
-- `FOG01` is reachable from the client.
+- FOG01 is reachable from the client.
 - Apache is running.
+- The client uses a firmware mode compatible with the configured PXE boot file.
 
 ```bash
-sudo systemctl status apache2
+sudo systemctl status apache2 --no-pager
 ```
+
+### Firmware Compatibility Issues
+
+If the client does not start the expected bootloader, check whether it uses Legacy BIOS or UEFI firmware.
+
+The current lab uses `undionly.kpxe` for Legacy BIOS. UEFI clients require a compatible boot file and DHCP configuration.
 
 ## 10. Screenshots
 
@@ -280,8 +307,8 @@ The DHCP scope options are documented separately in `08-dhcp-scope-options.png`.
 
 ## 11. Summary
 
-PXE network booting was configured using Windows DHCP Server on `DC01` and FOG Project on `FOG01`.
+PXE network booting was configured using Windows DHCP Server on DC01 and FOG Project on FOG01.
 
 The client successfully received its network configuration, downloaded `undionly.kpxe` through TFTP, started iPXE, and displayed the FOG boot menu.
 
-FOG host registration was also successfully tested.
+FOG host registration was also successfully tested in this lab.
