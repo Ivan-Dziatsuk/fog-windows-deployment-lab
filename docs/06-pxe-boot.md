@@ -1,121 +1,91 @@
 # PXE Network Boot Configuration
 
-## 1. Overview
+![PXE](https://img.shields.io/badge/PXE-Network_Boot-183A61?style=flat-square)
+![DHCP](https://img.shields.io/badge/DHCP-DC01-0078D4?style=flat-square)
+![TFTP](https://img.shields.io/badge/TFTP-FOG01-E95420?style=flat-square)
+![iPXE](https://img.shields.io/badge/Bootloader-iPXE-238636?style=flat-square)
 
-PXE (Preboot Execution Environment) allows a computer to boot from a network instead of starting an operating system from its local disk.
+## Overview
 
-In this lab, PXE is used to start the FOG Project boot environment and perform network-based host registration and operating system deployment.
+I configured PXE boot to start Windows virtual machines directly from the network instead of using their local disks.
 
-The PXE infrastructure consists of:
+The setup uses Windows DHCP on DC01 and FOG Project on FOG01. This keeps address assignment separate from the deployment service.
 
-- **DC01** — provides DHCP configuration.
-- **FOG01** — provides TFTP and FOG network boot services.
-- **Windows client VM** — acts as the PXE boot client.
+I tested the complete boot process, including DHCP configuration, TFTP file transfer, iPXE startup, and the FOG boot menu.
 
-## 2. PXE Infrastructure
+## PXE Infrastructure
 
-| Component | Hostname | IP Address | Responsibility |
+| Component | Hostname | IP Address | Role |
 |---|---|---|---|
-| DHCP Server | DC01 | 192.168.10.10 | Assigns IP addresses and PXE boot options |
-| PXE / TFTP Server | FOG01 | 192.168.10.20 | Provides the network boot file |
+| DHCP Server | DC01 | 192.168.10.10 | Assigns IP addresses and PXE options |
+| TFTP / PXE Server | FOG01 | 192.168.10.20 | Provides the network boot file |
 | PXE Client | Windows VM | DHCP | Starts network boot |
 
-### DHCP PXE Options
+### DHCP Boot Options
 
-The DHCP scope `LABNET` contains the following PXE settings:
+The LABNET scope on DC01 contains two additional options for PXE booting.
 
 | Option | Name | Value |
 |---|---|---|
 | 066 | Boot Server Host Name | 192.168.10.20 |
 | 067 | Bootfile Name | undionly.kpxe |
 
-The boot file `undionly.kpxe` is used for Legacy BIOS PXE booting.
+The boot file undionly.kpxe is used for Legacy BIOS PXE booting.
 
-UEFI clients may require a different boot file and DHCP configuration. The configuration documented here is the one tested in this lab.
+## How PXE Boot Works
 
-## 3. PXE Boot Process
+The process starts when a Windows VM attempts to boot from its network adapter.
 
-The PXE boot process follows these steps:
-
-1. The client starts and requests network configuration using DHCP.
-2. DC01 responds with an available IP address and network settings.
-3. The client receives DHCP PXE options 066 and 067.
-4. The client contacts FOG01 at `192.168.10.20`.
-5. The client downloads `undionly.kpxe` using TFTP.
-6. The downloaded iPXE bootloader starts.
-7. iPXE communicates with the FOG server and retrieves the network boot configuration.
+1. The client sends a DHCP request.
+2. DC01 assigns an IP address and provides the network configuration.
+3. The client receives DHCP options 066 and 067.
+4. The client contacts FOG01 at 192.168.10.20.
+5. TFTP transfers undionly.kpxe to the client.
+6. The iPXE bootloader starts.
+7. iPXE communicates with FOG and retrieves the network boot configuration.
 8. The FOG boot menu appears.
-9. The administrator can select an available network boot action.
 
-### Communication Flow
+This allows a client to start the FOG environment without using its local Windows installation.
 
-```text
-PXE Client
-    |
-    | DHCP Discovery / Request
-    v
-DC01 - DHCP Server
-192.168.10.10
-    |
-    | DHCP Response:
-    | IP configuration
-    | Option 066: 192.168.10.20
-    | Option 067: undionly.kpxe
-    |
-    v
-FOG01 - TFTP Server
-192.168.10.20
-    |
-    | Transfers undionly.kpxe
-    v
-PXE Client
-    |
-    | iPXE starts
-    |
-    | Retrieves boot configuration
-    v
-FOG Network Boot Menu
-```
+## VirtualBox Configuration
 
-## 4. VirtualBox Client Configuration
+The PXE client must use the same internal VirtualBox network as DC01 and FOG01.
 
-The Windows client VM must be connected to the same internal VirtualBox network as DC01 and FOG01.
+### Network Adapter
 
-### Configure Network Adapter
-
-1. Shut down the virtual machine.
+1. Shut down the Windows client VM.
 2. Open VirtualBox Manager.
-3. Select the Windows client VM.
+3. Select the required virtual machine.
 4. Open Settings → Network.
 5. Enable the network adapter.
 6. Set Attached to: Internal Network.
 7. Select the same internal network used by the lab servers.
-8. Save the configuration.
+8. Save the settings.
 
-### Configure Boot Order
+### Boot Order
+
+To make the VM attempt network boot first:
 
 1. Open the virtual machine Settings.
 2. Select System → Motherboard.
 3. Locate Boot Order.
 4. Enable Network.
-5. Move Network above Hard Disk when testing PXE boot.
+5. Move Network above Hard Disk.
 6. Save the changes.
 
-### Firmware Compatibility
+### Firmware Mode
 
-The current lab configuration uses `undionly.kpxe`, which is intended for Legacy BIOS PXE booting.
+The current PXE configuration uses undionly.kpxe, which is intended for Legacy BIOS.
 
-The client VM must therefore use a compatible BIOS firmware configuration.
+The VM must therefore use a compatible BIOS firmware configuration. UEFI network boot requires a different boot file and corresponding DHCP settings.
 
-UEFI network boot requires a different boot file and corresponding configuration.
-
-## 5. DHCP Configuration
+## DHCP Configuration on DC01
 
 DHCP is managed centrally on DC01.
 
-The following options are configured at the `LABNET` scope level.
+The PXE options are configured at the LABNET scope level.
 
-### GUI Configuration
+### Configure Through DHCP Manager
 
 1. Open Server Manager.
 2. Select Tools → DHCP.
@@ -123,31 +93,31 @@ The following options are configured at the `LABNET` scope level.
 4. Expand IPv4.
 5. Expand LABNET.
 6. Select Scope Options.
-7. Verify that options 066 and 067 contain the FOG server address and boot filename.
+7. Check options 066 and 067.
 
-### PowerShell Configuration
+The values should point to FOG01 and the correct network boot file.
 
-Run on DC01 in an elevated PowerShell session.
+### Configure Through PowerShell
+
+Run in an elevated PowerShell session on DC01.
 
 ```powershell
 $ScopeId = "192.168.10.0"
 
-# Configure PXE boot server
+# PXE boot server
 Set-DhcpServerv4OptionValue `
     -ScopeId $ScopeId `
     -OptionId 66 `
     -Value "192.168.10.20"
 
-# Configure PXE boot file
+# PXE boot file
 Set-DhcpServerv4OptionValue `
     -ScopeId $ScopeId `
     -OptionId 67 `
     -Value "undionly.kpxe"
 ```
 
-These commands change the existing DHCP scope options. They are included as configuration examples and do not need to be executed again when the settings are already correct.
-
-### Verify DHCP Options
+These commands modify the existing DHCP scope options. They are included as configuration examples and do not need to be executed again when the settings are already correct.
 
 To display the configured options:
 
@@ -155,29 +125,25 @@ To display the configured options:
 Get-DhcpServerv4OptionValue -ScopeId $ScopeId
 ```
 
-## 6. TFTP Configuration
+## TFTP Configuration on FOG01
 
-TFTP (Trivial File Transfer Protocol) is used to transfer the initial network boot file from FOG01 to the PXE client.
+TFTP (Trivial File Transfer Protocol) is used to transfer the initial boot file from FOG01 to the PXE client.
 
 The boot file used in this lab is:
 
-`undionly.kpxe`
+undionly.kpxe
 
-The default FOG TFTP directory is:
+Its location on FOG01 is:
 
-`/tftpboot`
+/tftpboot/undionly.kpxe
 
-### Verify the Boot File
-
-Run on FOG01:
+### Check the Boot File
 
 ```bash
 sudo ls -lh /tftpboot/undionly.kpxe
 ```
 
-This checks whether the boot file exists in the TFTP directory.
-
-### Verify TFTP Service
+### Check the TFTP Service
 
 ```bash
 sudo systemctl status tftpd-hpa --no-pager
@@ -189,37 +155,29 @@ To check whether a TFTP listener is present:
 sudo ss -lunp | grep ':69'
 ```
 
-TFTP uses UDP port 69 for its initial requests. File transfer then uses additional UDP ports.
+TFTP uses UDP port 69 for the initial request. The file transfer itself uses additional negotiated UDP ports.
 
-## 7. PXE Boot Testing
+## PXE Testing
 
-The PXE boot process was tested using a Windows virtual machine connected to the lab's internal network.
+I tested PXE boot using a Windows virtual machine connected to the internal network.
 
-### Test Procedure
+The client successfully completed the following steps:
 
-1. Start the PXE client VM.
-2. Select network boot if required.
-3. Observe the DHCP network configuration process.
-4. Verify that the client receives an address from the LABNET scope.
-5. Observe the TFTP transfer of `undionly.kpxe`.
-6. Verify that iPXE starts.
-7. Confirm that the FOG network boot menu appears.
+| Test | Result |
+|---|---|
+| DHCP address assignment | Successful |
+| DHCP PXE options | Configured |
+| TFTP boot file transfer | Successful |
+| iPXE startup | Successful |
+| FOG boot menu | Successfully displayed |
 
-### Test Results
+The test confirmed that DC01 and FOG01 work together to provide network boot functionality.
 
-| Test | Expected Result | Lab Result |
-|---|---|---|
-| DHCP address assignment | Client receives an address from LABNET | Successful |
-| DHCP PXE options | Boot server and boot filename are provided | Configured |
-| TFTP boot file transfer | undionly.kpxe is downloaded | Successful |
-| iPXE startup | iPXE boot environment starts | Successful |
-| FOG boot menu | FOG menu is displayed | Successful |
+## FOG Host Registration
 
-## 8. FOG Host Registration
+After reaching the FOG boot menu, I also tested host registration.
 
-FOG supports registering a client computer as a managed host.
-
-Host registration allows the server to identify and manage a computer in the FOG management interface.
+The registration process allows a Windows computer to be added to the list of managed hosts in FOG.
 
 ### Registration Procedure
 
@@ -227,22 +185,22 @@ Host registration allows the server to identify and manage a computer in the FOG
 2. Wait for the FOG boot menu.
 3. Select the host registration option.
 4. Follow the registration prompts.
-5. Open the FOG web management interface.
+5. Open the FOG management interface.
 6. Navigate to Hosts.
-7. Verify that the registered host appears in the list.
+7. Check that the registered computer appears in the list.
 
-Host registration was successfully tested in this lab.
+Host registration was successfully tested in the lab.
 
-## 9. Troubleshooting
+## Troubleshooting
 
 ### Client Does Not Receive an IP Address
 
-Possible causes:
+Possible causes include:
 
-- DHCP scope is inactive.
-- DHCP server is not bound to the internal network adapter.
-- Client is connected to the wrong VirtualBox network.
-- DHCP service is unavailable.
+- The DHCP scope is inactive.
+- The DHCP server is not bound to the internal network adapter.
+- The client is connected to the wrong VirtualBox network.
+- The DHCP service is unavailable.
 
 Useful commands on DC01:
 
@@ -256,12 +214,13 @@ Get-DhcpServerv4Lease -ScopeId "192.168.10.0"
 
 ### Client Receives an IP but Does Not Download the Boot File
 
-Check:
+Check the following:
 
-- DHCP option 066 points to `192.168.10.20`.
-- DHCP option 067 contains `undionly.kpxe`.
-- The TFTP service is running.
-- The boot file exists in `/tftpboot`.
+- Option 066 points to 192.168.10.20.
+- Option 067 contains undionly.kpxe.
+- The TFTP service is running on FOG01.
+- The boot file exists in /tftpboot.
+- The client is using the correct internal network.
 
 Useful commands on FOG01:
 
@@ -273,42 +232,46 @@ sudo ls -lh /tftpboot/undionly.kpxe
 
 ### FOG Boot Menu Does Not Appear
 
-Check:
+If iPXE starts but the FOG menu does not appear, check:
 
-- The iPXE bootloader starts successfully.
-- FOG01 is reachable from the client.
-- Apache is running.
-- The client uses a firmware mode compatible with the configured PXE boot file.
+- Whether FOG01 is reachable from the client.
+- Whether the Apache service is running.
+- Whether the client can communicate with the FOG server.
+- Whether the correct firmware mode and boot file are being used.
+
+Check Apache on FOG01:
 
 ```bash
 sudo systemctl status apache2 --no-pager
 ```
 
-### Firmware Compatibility Issues
+### BIOS and UEFI Compatibility
 
-If the client does not start the expected bootloader, check whether it uses Legacy BIOS or UEFI firmware.
+The current lab uses undionly.kpxe for Legacy BIOS.
 
-The current lab uses `undionly.kpxe` for Legacy BIOS. UEFI clients require a compatible boot file and DHCP configuration.
+A client using UEFI firmware may fail to start with this boot file. In that case, the boot file and DHCP configuration must match the firmware mode.
 
-## 10. Screenshots
+## Screenshots
 
-The following screenshots document the PXE configuration and testing:
+The following screenshots document the PXE configuration and testing.
 
 | Screenshot | Description |
 |---|---|
-| `20-pxe-client-network.png` | VirtualBox client network configuration |
-| `21-pxe-client-boot-order.png` | VirtualBox network boot configuration |
-| `22-pxe-client-dhcp.png` | Client receives an IP address during PXE startup |
-| `23-pxe-tftp-boot.png` | TFTP boot file transfer and iPXE startup |
-| `24-pxe-fog-menu.png` | FOG network boot menu |
-| `25-pxe-host-registration.png` | Successful host registration |
+| 20-pxe-client-network.png | VirtualBox client network configuration |
+| 21-pxe-client-boot-order.png | VirtualBox network boot configuration |
+| 22-pxe-client-dhcp.png | Client receives an IP address during PXE startup |
+| 23-pxe-tftp-boot.png | TFTP boot file transfer and iPXE startup |
+| 24-pxe-fog-menu.png | FOG network boot menu |
+| 25-pxe-host-registration.png | Successful host registration |
 
-The DHCP scope options are documented separately in `08-dhcp-scope-options.png`.
+The DHCP scope options are also documented in 08-dhcp-scope-options.png in the DNS and DHCP section.
 
-## 11. Summary
+Only include screenshots that actually exist in the repository.
 
-PXE network booting was configured using Windows DHCP Server on DC01 and FOG Project on FOG01.
+## Summary
 
-The client successfully received its network configuration, downloaded `undionly.kpxe` through TFTP, started iPXE, and displayed the FOG boot menu.
+I configured PXE boot using Windows DHCP Server on DC01 and FOG Project on FOG01.
 
-FOG host registration was also successfully tested in this lab.
+The Windows client successfully received its network configuration, downloaded undionly.kpxe through TFTP, started iPXE, and displayed the FOG boot menu.
+
+I also tested host registration, which allowed the client to appear in the FOG management interface.
