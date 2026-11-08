@@ -1,39 +1,43 @@
 # FOG Snapins and PowerShell Automation
 
-## 1. Overview
+![FOG Project](https://img.shields.io/badge/FOG-1.6.0-E95420?style=flat-square)
+![FOG Client](https://img.shields.io/badge/FOG_Client-0.13.0-183A61?style=flat-square)
+![PowerShell](https://img.shields.io/badge/PowerShell-Automation-5391FE?style=flat-square)
+![Windows](https://img.shields.io/badge/TARGET-Windows_11-0078D4?style=flat-square)
 
-FOG Snapins provide a way to execute scripts and deploy files or applications to managed Windows computers.
+## Overview
 
-In this lab, PowerShell scripts are used to test remote task execution and collect basic Windows system information.
+I used FOG Snapins to test remote PowerShell script execution on Windows clients.
 
-The FOG Client communicates with the FOG server and processes assigned Snapin tasks on the target computer.
+The FOG Client communicates with the FOG server and processes assigned tasks. This allows scripts to run on managed computers without manually opening PowerShell on every machine.
 
-### Environment Information
+During the lab, I tested two main use cases: creating a test file and collecting Windows system information.
+
+## Environment
 
 | Parameter | Value |
 |---|---|
 | FOG Server | FOG01 |
 | FOG Server IP | 192.168.10.20 |
-| FOG Project Version | 1.6.0 (build 5644) |
+| FOG Version | 1.6.0 (build 5644) |
 | Installation Channel | Beta |
 | FOG Client Version | 0.13.0 |
 | Target OS | Windows 11 Pro |
 | Script Language | PowerShell |
 
-## 2. FOG Snapin Configuration
+## Configuring a Snapin
 
-### Create a Snapin
+To create a Snapin in the FOG management interface:
 
-1. Open the FOG web management interface.
+1. Open the FOG web interface.
 2. Navigate to Snapin Management.
 3. Select Create New Snapin.
-4. Enter a Snapin name.
-5. Add a description.
-6. Select the PowerShell script file.
-7. Configure the executable and arguments.
-8. Save the Snapin.
+4. Enter a name and description.
+5. Upload the PowerShell script.
+6. Configure the executable and arguments.
+7. Save the Snapin.
 
-### PowerShell Execution Settings
+### PowerShell Execution
 
 The following execution configuration was used:
 
@@ -43,32 +47,30 @@ powershell.exe -ExecutionPolicy Bypass -NoProfile -File
 
 | Parameter | Purpose |
 |---|---|
-| `powershell.exe` | Starts Windows PowerShell |
-| `-ExecutionPolicy Bypass` | Bypasses the execution policy for this process |
-| `-NoProfile` | Prevents loading the user's PowerShell profile |
-| `-File` | Executes the specified script file |
+| powershell.exe | Starts Windows PowerShell |
+| -ExecutionPolicy Bypass | Bypasses execution policy for this process |
+| -NoProfile | Prevents loading the user's PowerShell profile |
+| -File | Executes the specified script file |
 
-`-ExecutionPolicy Bypass` applies to this PowerShell process. It does not permanently change the system execution policy.
+The execution policy option applies to the PowerShell process. It does not permanently change the computer's execution policy.
 
-### Assign a Snapin to a Host
+### Assigning a Snapin
+
+After creating a Snapin, it must be assigned to a host.
 
 1. Open Host Management.
 2. Select the target Windows computer.
 3. Open its Snapins configuration.
 4. Select the required Snapin.
 5. Save the host configuration.
-6. Make sure the FOG Client is installed and running on the target computer.
+6. Make sure the FOG Client is installed and running.
 7. Wait for the client to receive and execute the task.
 
-## 3. Test File Snapin
+## Test File Snapin
 
-The first successful test verified that FOG could execute a PowerShell script on a Windows client.
+The first test was a simple PowerShell script that created a directory and saved a result file on the target computer.
 
-### Script
-
-File name:
-
-`FOG-Test.ps1`
+File name: FOG-Test.ps1
 
 ```powershell
 $Path = "C:\FOG-Test"
@@ -83,17 +85,9 @@ Date: $(Get-Date)
 "@ | Out-File "$Path\Result.txt" -Encoding UTF8
 ```
 
-### Script Explanation
+The script creates C:\FOG-Test if it does not already exist and writes the computer name and execution date to Result.txt.
 
-- `$Path` stores the destination directory.
-- `New-Item` creates the directory if it does not exist.
-- `-Force` allows the command to reuse an existing directory.
-- `Out-Null` suppresses unnecessary command output.
-- `Out-File` writes the result to a text file.
-- `$env:COMPUTERNAME` records the computer name.
-- `Get-Date` records the execution date and time.
-
-### Verification
+### Checking the Result
 
 Run on the target Windows computer:
 
@@ -101,27 +95,23 @@ Run on the target Windows computer:
 Test-Path "C:\FOG-Test\Result.txt"
 ```
 
-Display the file contents:
+To display the contents:
 
 ```powershell
 Get-Content "C:\FOG-Test\Result.txt"
 ```
 
-Expected result: the file exists and contains the success message, computer name, and execution date.
+The test was successful. The result file was created on the Windows client and contained the expected information.
 
-**Lab result: Successful.**
+![Test File Snapin](https://img.shields.io/badge/RESULT-SUCCESS-238636?style=flat-square)
 
-## 4. Windows Inventory Snapin
+## Windows Inventory Snapin
 
-The Windows Inventory Snapin collects basic system information using PowerShell and Windows CIM classes.
+The second Snapin collects basic hardware and operating system information using Windows CIM classes.
 
-The resulting report is saved locally on the target computer.
+I used it to generate a local inventory report on the target computer.
 
-### Script
-
-File name:
-
-`Windows-Inventory.ps1`
+File name: Windows-Inventory.ps1
 
 ```powershell
 $Computer = Get-CimInstance Win32_ComputerSystem
@@ -177,63 +167,61 @@ $Report | Format-List |
 | IP addresses | Win32_NetworkAdapterConfiguration.IPAddress |
 | Disk information | Win32_LogicalDisk |
 
-### Verification
+The report is saved locally as C:\FOG-Inventory.txt.
 
-Check whether the report exists:
+### Checking the Report
+
+Check whether the file exists:
 
 ```powershell
 Test-Path "C:\FOG-Inventory.txt"
 ```
 
-Display the inventory report:
+Display the report:
 
 ```powershell
 Get-Content "C:\FOG-Inventory.txt"
 ```
 
-**Lab result: Successful.** The inventory report was generated on the Windows client.
+The inventory Snapin executed successfully and generated the report on the Windows client.
 
-## 5. Software Deployment Test
+![Inventory Snapin](https://img.shields.io/badge/RESULT-SUCCESS-238636?style=flat-square)
 
-A separate experiment was performed to test the use of FOG Snapins for software deployment.
+## Software Deployment Experiment
 
-The test script created a local test file.
+I also tested the use of FOG Snapins for software deployment.
 
-This verified that a Snapin could execute a PowerShell script, but it did not install an actual application.
-
-### Lab Result
+The experiment verified that a Snapin could execute a PowerShell script and create a local test file. However, it did not install an actual application.
 
 | Test | Result |
 |---|---|
 | PowerShell script execution | Successful |
 | Test file creation | Successful |
-| Actual software installation | Not demonstrated |
+| Actual application installation | Not demonstrated |
 
-This experiment is not considered a successful software installation deployment.
+This was a test of Snapin execution, not a completed software deployment.
 
-## 6. Troubleshooting
+## Troubleshooting
 
 ### FOG Hostname Changer
 
-An attempt was made to change a Windows computer name using the FOG Hostname Changer.
+I attempted to change a Windows computer name using the FOG Hostname Changer.
 
-The operation did not complete successfully.
-
-The FOG log displayed the following message:
+The operation did not complete successfully. The FOG log displayed:
 
 ```text
 Users still logged in and enforce is disabled, delaying any further actions
 ```
 
-This indicated that the hostname change was being delayed because users were still logged in and the enforcement setting was disabled.
+The hostname change was delayed because users were still logged in and the enforcement setting was disabled.
 
-The hostname change is not considered successfully implemented in this lab.
+I did not consider this operation successfully implemented.
 
 ### Manual Domain Joining
 
-Domain joining is performed manually using PowerShell rather than through an automated FOG Snapin.
+For domain joining, I used PowerShell separately instead of an automated FOG Snapin.
 
-Example:
+The following example joins a Windows client to contoso.local and places its computer account in the IT-Computers OU.
 
 ```powershell
 $Credential = Get-Credential `
@@ -247,35 +235,32 @@ Add-Computer `
     -Restart
 ```
 
-This command requires valid domain credentials and a reachable domain controller.
+The command requires valid domain credentials and connectivity to DC01.
 
-It is a manual administration procedure, not an automatically executed FOG Snapin.
+It is a manual administration procedure, separate from FOG Snapin execution.
 
-## 7. Screenshots
+## Screenshots
 
-The following screenshots document the FOG Snapin experiments:
+The following screenshots document the Snapin configuration and tests.
 
 | Screenshot | Description |
 |---|---|
-| `37-fog-snapin-management.png` | FOG Snapin Management interface |
-| `38-fog-test-snapin.png` | Test File Snapin configuration |
-| `39-fog-test-snapin-result.png` | Successful test file on Windows client |
-| `40-fog-inventory-snapin.png` | Windows Inventory Snapin configuration |
-| `41-fog-inventory-report.png` | Generated Windows inventory report |
-| `42-fog-software-deployment-test.png` | Software Deployment Test result |
-| `43-fog-hostname-changer-log.png` | Hostname Changer troubleshooting message |
+| 37-fog-snapin-management.png | FOG Snapin Management interface |
+| 38-fog-test-snapin.png | Test File Snapin configuration |
+| 39-fog-test-snapin-result.png | Created test file on Windows client |
+| 40-fog-inventory-snapin.png | Windows Inventory Snapin configuration |
+| 41-fog-inventory-report.png | Generated Windows inventory report |
+| 42-fog-software-deployment-test.png | Software Deployment experiment |
+| 43-fog-hostname-changer-log.png | Hostname Changer troubleshooting message |
 
-Only include screenshots that actually exist. Do not create screenshots to represent tests that were not performed.
+Only include screenshots that actually exist and reflect the corresponding tests.
 
-## 8. Summary
+## Summary
 
-FOG Snapins were used to execute PowerShell scripts on Windows clients.
+I used FOG Snapins to execute PowerShell scripts on Windows clients.
 
-Two successful use cases were demonstrated:
+Two working examples were demonstrated: creating a test file remotely and collecting basic Windows inventory information.
 
-- Creating a test file remotely through a Snapin.
-- Collecting basic Windows system information and generating an inventory report.
+I also investigated automatic hostname changes through the FOG Client and documented the issue encountered during testing.
 
-The automatic hostname change experiment was unsuccessful and is documented as a troubleshooting example.
-
-Domain joining remains a separate manual procedure using PowerShell.
+Domain joining remained a separate manual procedure using PowerShell.
