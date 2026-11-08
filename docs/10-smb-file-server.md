@@ -29,7 +29,7 @@ The shared folder is used to demonstrate centralized file access management thro
 
 The shared directory contains three subfolders:
 
-```text
+```text id="smbtree"
 C:\Shares\IT-Share
 │
 ├── Public
@@ -67,13 +67,15 @@ The following permissions are configured for the `IT-Share` SMB share:
 9. Review or configure the required groups and permissions.
 10. Apply the changes.
 
-### Permission Levels
+### Share Permission Levels
 
 | Permission | Description |
 |---|---|
 | Read | View files and folders |
 | Change | Read, create, modify, and delete files |
-| Full Control | Change permissions and take ownership in addition to normal file access |
+| Full Control | Includes Read and Change permissions and allows management of share permissions |
+
+Share Permissions apply to network access through the SMB share. They do not replace NTFS permissions.
 
 ## 4. NTFS Permissions
 
@@ -120,6 +122,8 @@ Inheritance can be reviewed and managed through:
 
 The actual inherited and explicit permission entries should be checked before modifying them.
 
+**Important:** The permissions listed above describe the configured group entries. Other inherited permissions, group memberships, and explicit Deny entries can also affect a user's effective access.
+
 ## 5. PowerShell Configuration
 
 Run these commands on `DC01` using an elevated PowerShell session.
@@ -128,7 +132,7 @@ Run these commands on `DC01` using an elevated PowerShell session.
 
 The following commands create the directory structure if it does not already exist.
 
-```powershell id="k1y0qb"
+```powershell id="smbfolders"
 $BasePath = "C:\Shares\IT-Share"
 
 $Folders = @(
@@ -147,7 +151,7 @@ foreach ($Folder in $Folders) {
 
 Example configuration for a new share:
 
-```powershell id="1qj5cu"
+```powershell id="smbcreate"
 New-SmbShare `
     -Name "IT-Share" `
     -Path "C:\Shares\IT-Share" `
@@ -159,14 +163,14 @@ This command creates a new share. Do not run it if `IT-Share` already exists.
 
 ### Display SMB Shares
 
-```powershell id="g8l3kq"
+```powershell id="smbdisplay"
 Get-SmbShare |
     Select-Object Name, Path, Description
 ```
 
 ### Display Share Permissions
 
-```powershell id="4zxd8w"
+```powershell id="smbaccess"
 Get-SmbShareAccess -Name "IT-Share"
 ```
 
@@ -174,7 +178,7 @@ Get-SmbShareAccess -Name "IT-Share"
 
 The following commands add the specified permissions to the existing folders.
 
-```powershell id="9xh3zr"
+```powershell id="smbacl"
 # Employees: Modify access to Public
 icacls "C:\Shares\IT-Share\Public" `
     /grant "CONTOSO\Employees:(OI)(CI)M"
@@ -202,7 +206,7 @@ These commands add permissions; they do not remove other existing Allow or Deny 
 
 ### Display NTFS Permissions
 
-```powershell id="xzhg6n"
+```powershell id="smbshowacl"
 icacls "C:\Shares\IT-Share\Public"
 icacls "C:\Shares\IT-Share\Helpdesk"
 icacls "C:\Shares\IT-Share\Admin"
@@ -212,20 +216,20 @@ icacls "C:\Shares\IT-Share\Admin"
 
 ### Verify the SMB Share
 
-```powershell id="2y0mvn"
+```powershell id="smbverify"
 Get-SmbShare -Name "IT-Share" |
     Select-Object Name, Path, Description
 ```
 
 ### Verify Share Permissions
 
-```powershell id="6gqs5d"
+```powershell id="smbverifyaccess"
 Get-SmbShareAccess -Name "IT-Share"
 ```
 
 ### Verify NTFS Permissions
 
-```powershell id="1v7u9g"
+```powershell id="smbverifyacl"
 icacls "C:\Shares\IT-Share"
 icacls "C:\Shares\IT-Share\Public"
 icacls "C:\Shares\IT-Share\Helpdesk"
@@ -236,27 +240,29 @@ icacls "C:\Shares\IT-Share\Admin"
 
 From a Windows client, use:
 
-```powershell id="7t4mvw"
+```powershell id="smbtest"
 Test-Path "\\DC01\IT-Share"
 ```
 
 Display the shared folder contents:
 
-```powershell id="4x8rql"
+```powershell id="smbcontents"
 Get-ChildItem "\\DC01\IT-Share"
 ```
+
+These commands test access using the current Windows security context. A failed `Test-Path` does not by itself distinguish between a missing path and an access or connectivity problem.
 
 ### Connect to the Share
 
 Open File Explorer and enter:
 
-```text
+```text id="smbunc"
 \\DC01\IT-Share
 ```
 
 Alternatively, map the shared folder to a network drive:
 
-```powershell id="5ym4ws"
+```powershell id="smbmap"
 New-PSDrive `
     -Name "IT" `
     -PSProvider FileSystem `
@@ -266,17 +272,27 @@ New-PSDrive `
 
 ## 7. Effective Access and Troubleshooting
 
-Windows calculates effective access using both Share Permissions and NTFS Permissions.
+Windows evaluates both Share Permissions and NTFS Permissions when a user accesses a folder through an SMB share.
 
-When accessing a folder through an SMB share, the effective access is the most restrictive result of the two permission layers.
+The effective network access is limited by the permissions granted at both layers.
 
 For example:
 
 - Share permission: Change
 - NTFS permission: Modify
-- Effective access: Modify
+- Effective access: Modify-level file access, limited by both permission layers.
 
 An Allow permission at one layer cannot override a restriction imposed by the other layer.
+
+### Factors Affecting Effective Access
+
+- Active Directory group membership.
+- Inherited NTFS permissions.
+- Explicit Allow and Deny entries.
+- Share-level permissions.
+- The user's current Windows logon security token.
+
+A user who has recently been added to a security group may need to sign out and sign in again to refresh the group membership in the logon token.
 
 ### Verify Effective Access Using GUI
 
