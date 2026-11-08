@@ -257,12 +257,8 @@ The following screenshots document the PXE configuration and testing.
 
 | Screenshot | Description |
 |---|---|
-| 20-pxe-client-network.png | VirtualBox client network configuration |
-| 21-pxe-client-boot-order.png | VirtualBox network boot configuration |
-| 22-pxe-client-dhcp.png | Client receives an IP address during PXE startup |
-| 23-pxe-tftp-boot.png | TFTP boot file transfer and iPXE startup |
-| 24-pxe-fog-menu.png | FOG network boot menu |
-| 25-pxe-host-registration.png | Successful host registration |
+| 20-pxe-client-boot.png | Windows client booting from the network (PXE boot process) |
+| 21-pxe-host-registration-menu.png | FOG menu with the option to register a new host |
 
 The DHCP scope options are also documented in 08-dhcp-scope-options.png in the DNS and DHCP section.
 
