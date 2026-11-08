@@ -1,27 +1,36 @@
 # Active Directory Domain Services
 
-## 1. Overview
+![Active Directory](https://img.shields.io/badge/ACTIVE_DIRECTORY-contoso.local-0969DA?style=flat-square)
+![Domain Controller](https://img.shields.io/badge/DOMAIN_CONTROLLER-DC01-0078D4?style=flat-square)
+![Operating System](https://img.shields.io/badge/WINDOWS_SERVER-2022-0078D4?style=flat-square)
 
-Active Directory Domain Services (AD DS) provides centralized authentication, authorization, and management of users and computers in the lab environment.
+## Overview
 
-The domain controller is `DC01`, running Windows Server 2022.
+I set up Active Directory Domain Services on DC01 to manage users, computers, and authentication in the lab.
 
-### Domain Information
+The domain is contoso.local. I organized domain objects into separate Organizational Units so that users, computers, groups, and servers are easier to manage.
+
+The environment is also used to practice joining Windows clients to the domain, moving computer accounts between OUs, and checking domain connectivity.
+
+## Domain Information
 
 | Parameter | Value |
 |---|---|
-| Domain Name | `contoso.local` |
-| Domain Controller | `DC01` |
-| Domain Controller IP | `192.168.10.10` |
+| Domain Name | contoso.local |
+| Domain Controller | DC01 |
+| Domain Controller IP | 192.168.10.10 |
+| Operating System | Windows Server 2022 |
 | Domain Functional Level | Windows Server 2016 |
 | Forest Functional Level | Windows Server 2016 |
-| DNS Server | `DC01` |
+| DNS Server | DC01 |
 
-## 2. Organizational Unit Structure
+The domain and forest functional levels are set to Windows Server 2016. This does not mean that the domain controller is running Windows Server 2016; the actual operating system on DC01 is Windows Server 2022.
 
-The domain contains the following Organizational Units:
+## Organizational Units
 
-| OU | Purpose |
+I created the following OU structure to keep the domain objects organized.
+
+| Organizational Unit | Purpose |
 |---|---|
 | Domain Controllers | Domain controller computer accounts |
 | Groups | Security and distribution groups |
@@ -29,68 +38,66 @@ The domain contains the following Organizational Units:
 | IT-Users | IT department user accounts |
 | IT-Computers | IT workstation computer accounts |
 
-This structure helps organize domain objects and allows Group Policy to be applied to specific organizational units.
+This structure also makes it easier to link Group Policy Objects to specific groups of computers or users.
 
-## 3. GUI Configuration
+## Managing Users and Computers
 
-### Open Active Directory Users and Computers
+### Domain User
 
-1. Open Server Manager.
-2. Select Tools.
-3. Click Active Directory Users and Computers.
-4. Expand the `contoso.local` domain.
-
-### Create an Organizational Unit
-
-1. Right-click `contoso.local`.
-2. Select New → Organizational Unit.
-3. Enter the OU name.
-4. Click OK.
-5. Repeat for the required organizational units.
-
-### Create a Domain User
-
-The existing domain user account:
+One of the domain accounts created in the lab is Client1.
 
 | Parameter | Value |
 |---|---|
-| Name | `Client1` |
-| SamAccountName | `client1` |
-| User Principal Name | `client1@contoso.local` |
-| Organizational Unit | `IT-Users` |
+| Name | Client1 |
+| SamAccountName | client1 |
+| User Principal Name | client1@contoso.local |
+| Organizational Unit | IT-Users |
 | Account Status | Enabled |
 
-To create another domain user:
+The Client1 account is a domain user account stored in IT-Users. It should not be confused with a computer account.
 
-1. Open the `IT-Users` OU.
-2. Right-click the empty area.
-3. Select New → User.
-4. Enter the user's first name and logon name.
-5. Click Next.
-6. Set a password.
-7. Configure the required password options.
-8. Click Finish.
+### Creating a User Through Active Directory Users and Computers
 
-### Manage Computer Accounts
+1. Open Server Manager on DC01.
+2. Select Tools → Active Directory Users and Computers.
+3. Expand contoso.local.
+4. Open the IT-Users OU.
+5. Right-click the OU and select New → User.
+6. Enter the user's name and logon name.
+7. Set an account password.
+8. Configure the required password options.
+9. Finish the wizard.
+
+### Managing Computer Accounts
+
+Computer accounts are stored separately from user accounts.
+
+In this lab, workstation computer accounts are organized in IT-Computers.
+
+To move a computer account into the correct OU:
 
 1. Open Active Directory Users and Computers.
-2. Locate the computer account.
+2. Locate the required computer account.
 3. Right-click the account and select Move.
-4. Select the destination OU, for example `IT-Computers`.
+4. Select IT-Computers.
 5. Confirm the operation.
 
-## 4. PowerShell Configuration
+Separating users and computers into different OUs makes it possible to manage their policies independently.
 
-Run these commands on the domain controller with the Active Directory PowerShell module available.
+## PowerShell Administration
 
-### Verify Domain Configuration
+I also use PowerShell to inspect and manage Active Directory objects. The following examples can be run on DC01 with the Active Directory module available.
+
+### Domain and Forest Information
 
 ```powershell
 Get-ADDomain
 Get-ADForest
 ```
 
-### Display Organizational Units
+These commands display domain settings, forest settings, and functional levels.
+
+### List Organizational Units
 
 ```powershell
 Get-ADOrganizationalUnit -Filter * |
@@ -99,7 +106,7 @@ Get-ADOrganizationalUnit -Filter * |
 
 ### Create an Organizational Unit
 
-The following example creates an OU only if it does not already exist.
+The following example checks whether an OU already exists before creating it.
 
 ```powershell
 $OUName = "IT-Users"
@@ -119,9 +126,11 @@ else {
 }
 ```
 
+This is a reusable example. The IT-Users OU is already present in the lab.
+
 ### Create a Domain User
 
-Example of creating an additional domain user:
+Example of creating an additional account:
 
 ```powershell
 $Password = Read-Host "Enter password" -AsSecureString
@@ -135,16 +144,16 @@ New-ADUser `
     -Enabled $true
 ```
 
-This is an example for creating an additional account. The existing `client1` account has already been created.
+This example creates User2. It does not recreate or modify the existing Client1 account.
 
-### Display Domain Users
+### List Domain Users
 
 ```powershell
 Get-ADUser -Filter * |
     Select-Object Name, SamAccountName, Enabled
 ```
 
-### Display Domain Computers
+### List Domain Computers
 
 ```powershell
 Get-ADComputer -Filter * |
@@ -153,7 +162,14 @@ Get-ADComputer -Filter * |
 
 ### Move a Computer to an OU
 
-Example:
+Before moving a computer, check its current Distinguished Name:
+
+```powershell
+Get-ADComputer -Identity "COMPUTER-NAME" |
+    Select-Object Name, DistinguishedName
+```
+
+Then use its actual Distinguished Name:
 
 ```powershell
 Move-ADObject `
@@ -161,73 +177,108 @@ Move-ADObject `
     -TargetPath "OU=IT-Computers,DC=contoso,DC=local"
 ```
 
-Replace `COMPUTER-NAME` with the actual computer account name. Check its current Distinguished Name before running this command.
+Replace COMPUTER-NAME and the source Distinguished Name with the actual values from your domain.
 
-## 5. Verification
+## Domain Joining and Verification
 
-The following checks are performed directly on the domain controller.
+Windows clients can be joined to the domain through the Windows system settings or PowerShell.
 
-### Verify Domain Configuration
+The following example joins a computer to contoso.local and places its computer account directly in IT-Computers.
+
+```powershell
+Add-Computer `
+    -DomainName "contoso.local" `
+    -OUPath "OU=IT-Computers,DC=contoso,DC=local" `
+    -Credential "contoso\Administrator" `
+    -Restart
+```
+
+This operation requires valid domain credentials and connectivity to DC01.
+
+### Check Domain Membership
+
+Run on the Windows client:
+
+```powershell
+Get-CimInstance Win32_ComputerSystem |
+    Select-Object Name, Domain, PartOfDomain
+```
+
+### Verify Secure Channel
+
+```powershell
+Test-ComputerSecureChannel -Verbose
+```
+
+This checks the secure channel between the domain-joined computer and its domain controller.
+
+The domain membership and Secure Channel were tested on WIN11-TEST.
+
+### Find the Domain Controller
+
+```powershell
+nltest /dsgetdc:contoso.local
+```
+
+This command checks whether a domain controller can be discovered for contoso.local.
+
+## Verification on DC01
+
+The following commands can be used to inspect the current Active Directory configuration.
+
+### Domain Information
 
 ```powershell
 Get-ADDomain |
     Select-Object DNSRoot, DomainMode, PDCEmulator
 ```
 
-### Verify Forest Configuration
+### Forest Information
 
 ```powershell
 Get-ADForest |
     Select-Object RootDomain, ForestMode
 ```
 
-### Verify Organizational Units
+### Organizational Units
 
 ```powershell
 Get-ADOrganizationalUnit -Filter * |
     Select-Object Name, DistinguishedName
 ```
 
-### Verify the Existing Client1 User
+### Existing Client1 Account
 
 ```powershell
 Get-ADUser -Identity "client1" -Properties Enabled, UserPrincipalName |
     Select-Object Name, SamAccountName, UserPrincipalName, Enabled
 ```
 
-### Verify Computer Accounts
+### Computer Accounts
 
 ```powershell
 Get-ADComputer -Filter * |
     Select-Object Name, DistinguishedName
 ```
 
-### Verify Domain Controller Discovery
-
-```powershell
-nltest /dsgetdc:contoso.local
-```
-
-This command checks whether the domain controller can be discovered for the domain.
-
-## 6. Screenshots
+## Screenshots
 
 The following screenshots document the Active Directory configuration:
 
 | Screenshot | Description |
 |---|---|
-| `01-ad-domain.png` | Domain structure in Active Directory Users and Computers |
-| `02-ad-organizational-units.png` | Organizational Unit structure |
-| `03-ad-users.png` | Domain user accounts, including Client1 |
-| `04-ad-computers.png` | Domain computer accounts |
-| `05-ad-powershell.png` | PowerShell domain and OU verification |
+| 01-ad-domain.png | Domain structure in Active Directory Users and Computers |
+| 02-ad-organizational-units.png | Organizational Unit structure |
+| 03-ad-users.png | Domain user accounts, including Client1 |
+| 04-ad-computers.png | Domain computer accounts |
+| 05-ad-powershell.png | PowerShell domain and OU verification |
 
-## 7. Summary
+Only screenshots showing actual lab configuration should be included.
 
-Active Directory provides centralized identity and computer management for the lab.
+## Summary
 
-The domain structure separates users, computers, servers, and groups into dedicated organizational units.
+DC01 provides centralized identity and computer management through Active Directory.
 
-Both graphical management tools and PowerShell are used to configure and verify the environment.
+I organized the domain into separate OUs, created domain accounts, managed computer objects, and joined Windows 11 clients to the domain.
 
-Client domain-joining and Secure Channel verification will be documented separately after a new Windows client is prepared and connected to the domain.
+Both Active Directory Users and Computers and PowerShell are used for administration. Domain membership and Secure Channel connectivity were also tested on WIN11-TEST.
