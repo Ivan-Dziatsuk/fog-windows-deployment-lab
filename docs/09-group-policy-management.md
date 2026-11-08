@@ -1,95 +1,96 @@
 # Group Policy Management
 
-## 1. Overview
+![Active Directory](https://img.shields.io/badge/ACTIVE_DIRECTORY-contoso.local-0969DA?style=flat-square)
+![Group Policy](https://img.shields.io/badge/GROUP_POLICY-GPMC-0078D4?style=flat-square)
+![Windows Server](https://img.shields.io/badge/WINDOWS_SERVER-2022-0078D4?style=flat-square)
 
-Group Policy is a Windows feature used to centrally manage user and computer settings in an Active Directory environment.
+## Overview
 
-In this lab, Group Policy is used to manage Windows security settings, audit policies, and computer configuration.
+I use Group Policy to manage computer settings centrally in the contoso.local domain.
 
-Group Policy Objects (GPOs) are managed through Group Policy Management Console (GPMC) and can be linked to domains or Organizational Units.
+The GPOs are managed on DC01 through Group Policy Management Console (GPMC). They are used to organize computer configuration, manage Microsoft Defender settings, and work with Windows security auditing and Windows Update.
 
-The domain controller is `DC01`, running Windows Server 2022.
+One of the settings I configured and verified was Microsoft Defender potentially unwanted application (PUA) protection in Block mode.
 
-## 2. Group Policy Environment
-
-### Domain Information
+## Domain Environment
 
 | Parameter | Value |
 |---|---|
-| Domain | `contoso.local` |
-| Domain Controller | `DC01` |
-| Domain Controller IP | `192.168.10.10` |
-| Computer OU | `IT-Computers` |
-| Computer OU DN | `OU=IT-Computers,DC=contoso,DC=local` |
+| Domain | contoso.local |
+| Domain Controller | DC01 |
+| DC01 IP Address | 192.168.10.10 |
+| Operating System | Windows Server 2022 |
+| Computer OU | IT-Computers |
+| OU Distinguished Name | OU=IT-Computers,DC=contoso,DC=local |
 
 ### Existing Group Policy Objects
 
-The following GPOs were observed in the Group Policy Results output on the domain-joined test computer:
+The following GPOs appeared in Group Policy Results on the domain-joined test computer:
 
 | GPO Name | Purpose |
 |---|---|
 | Default Domain Policy | Default domain-wide settings |
 | GPO-Defender Baseline | Microsoft Defender configuration |
-| GPO - Security Audit | Advanced security auditing |
+| GPO - Security Audit | Security auditing |
 | GPO - Windows Update | Windows Update management |
 | IT-Computers-Policy | Computer policies for the IT-Computers OU |
 
-The exact settings of each GPO should be verified in Group Policy Management before making changes.
+The IT-Computers-Policy GPO is linked to the IT-Computers OU.
 
-## 3. GUI Configuration
+The appearance of a GPO in the applied policy list confirms that it was processed by the computer. It does not automatically confirm that every setting inside that GPO is configured as expected.
+
+## Managing Group Policy
 
 ### Open Group Policy Management
 
-1. Open Server Manager on `DC01`.
+On DC01:
+
+1. Open Server Manager.
 2. Select Tools.
-3. Click Group Policy Management.
+3. Open Group Policy Management.
 4. Expand Forest.
 5. Expand Domains.
-6. Expand `contoso.local`.
+6. Select contoso.local.
 
-The console displays the domain structure, Organizational Units, and linked Group Policy Objects.
+The console displays the domain structure, Organizational Units, GPO links, and policy inheritance.
 
 ### View GPO Links
 
-1. Expand `contoso.local`.
-2. Select the `IT-Computers` OU.
+To check policies linked to a particular OU:
+
+1. Expand contoso.local.
+2. Select the IT-Computers OU.
 3. Open the Linked Group Policy Objects tab.
 4. Review the linked policies.
-5. Check which GPOs are inherited from the parent domain.
-
-The `IT-Computers-Policy` GPO is linked to the `IT-Computers` OU.
+5. Check which policies are inherited from the parent domain.
 
 ### Create a New GPO
 
 1. Right-click the target domain or Organizational Unit.
 2. Select Create a GPO in this domain, and Link it here.
-3. Enter a descriptive GPO name.
+3. Enter a descriptive name.
 4. Click OK.
 
-A new GPO can also be created separately in Group Policy Objects and linked later.
+A GPO can also be created separately under Group Policy Objects and linked to an OU later.
 
-### Edit a GPO
+### Edit an Existing GPO
 
 1. Locate the required GPO.
 2. Right-click it.
 3. Select Edit.
-4. Navigate through Computer Configuration or User Configuration.
-5. Configure the required policy settings.
-6. Close the editor.
+4. Open Computer Configuration or User Configuration.
+5. Navigate to the required policy setting.
+6. Make the necessary changes.
 
 Computer Configuration applies to computer accounts, while User Configuration applies to user accounts.
 
-## 4. GPO-Defender Baseline
+## Microsoft Defender Baseline
 
-This GPO contains a Microsoft Defender Antivirus setting for potentially unwanted applications (PUA).
+I used GPO-Defender Baseline to configure potentially unwanted application (PUA) detection in Microsoft Defender Antivirus.
 
-### Configuration Path
+### Policy Location
 
-Open Group Policy Management and edit:
-
-`GPO-Defender Baseline`
-
-Navigate to:
+Open GPO-Defender Baseline in Group Policy Management and navigate to:
 
 ```text
 Computer Configuration
@@ -100,21 +101,21 @@ Computer Configuration
           → MpEngine
 ```
 
-Open:
+Open the policy:
 
-`Configure detection for potentially unwanted applications`
+Configure detection for potentially unwanted applications
 
-### Configured Setting
+### Configured Value
 
-| Parameter | Value |
+| Setting | Value |
 |---|---|
-| Policy | Configure detection for potentially unwanted applications |
-| State | Enabled |
+| Policy State | Enabled |
 | Detection Action | Block |
+| PUAProtection | 1 |
 
-This configuration enables Microsoft Defender PUA protection in Block mode.
+This enables Defender PUA protection in Block mode.
 
-### Verify Defender Configuration
+### Check the Effective Configuration
 
 Run on the domain-joined Windows test computer:
 
@@ -123,7 +124,7 @@ Get-MpPreference |
     Select-Object PUAProtection
 ```
 
-Observed configuration:
+The PUAProtection property uses the following values:
 
 | Value | Meaning |
 |---|---|
@@ -131,23 +132,17 @@ Observed configuration:
 | 1 | Block |
 | 2 | Audit |
 
-The PUA protection setting was changed from Audit (`2`) to Block (`1`) through Group Policy.
+During the lab, the setting was changed from Audit (2) to Block (1) through Group Policy and its effective value was checked on the Windows test computer.
 
-The effective value can be checked with `Get-MpPreference`. Group Policy Results can additionally be used to identify the policy applied to the computer.
+## Security Auditing
 
-## 5. GPO - Security Audit
+I also created a GPO named GPO - Security Audit to work with Windows Advanced Audit Policy.
 
-This GPO is used to manage Windows Advanced Audit Policy settings.
+Audit policies control which security-related activities Windows records in the Security event log.
 
-Audit policies allow Windows to record security-related events in the Security event log.
+### Policy Location
 
-### Configuration Path
-
-Edit:
-
-`GPO - Security Audit`
-
-Navigate to:
+Open GPO - Security Audit and navigate to:
 
 ```text
 Computer Configuration
@@ -158,47 +153,43 @@ Computer Configuration
           → System Audit Policies
 ```
 
-The following policy areas were used during configuration:
+The main audit categories relevant to this lab include:
 
-### Logon/Logoff
-
-Relevant audit settings:
+**Logon/Logoff**
 
 - Audit Logon
 - Audit Logoff
 - Audit Account Lockout
 
-These settings help monitor authentication activity and account lockout events.
-
-### Account Management
-
-Relevant audit settings:
+**Account Management**
 
 - Audit User Account Management
 - Audit Security Group Management
 
-These settings help monitor changes to user accounts and security groups.
+These categories help monitor authentication activity, account lockouts, and changes to users and security groups.
 
-The effective state of each audit subcategory should be checked on the target computer before claiming that every setting is enabled.
+The effective state of individual audit subcategories should be checked before assuming that every setting is enabled.
 
-### Verify Audit Policy
+### Check Effective Audit Policy
 
-Run on the Windows test computer:
+Run on a Windows client:
 
 ```powershell
 auditpol /get /category:*
 ```
 
-This displays the effective Advanced Audit Policy configuration.
+This displays the currently effective Advanced Audit Policy configuration.
 
 ### Review Security Events
+
+To inspect generated events:
 
 1. Open Event Viewer.
 2. Expand Windows Logs.
 3. Select Security.
-4. Review authentication and account management events.
+4. Review the recorded events.
 
-Useful event IDs include:
+Some useful Windows Security event IDs are:
 
 | Event ID | Description |
 |---|---|
@@ -212,19 +203,17 @@ Useful event IDs include:
 | 4728 | Member added to a global security group |
 | 4732 | Member added to a local security group |
 
-Event generation depends on the effective audit policy and the activity performed.
+Events are generated according to the effective audit configuration and the activity performed on the system.
 
-## 6. GPO - Windows Update
+## Windows Update Policy
 
-This GPO is used for Windows Update-related computer settings.
+A separate GPO named GPO - Windows Update is present in the lab.
 
-### Configuration Path
+Its purpose is to manage Windows Update-related computer settings.
 
-Edit:
+### Policy Location
 
-`GPO - Windows Update`
-
-Navigate to:
+Open GPO - Windows Update and navigate to:
 
 ```text
 Computer Configuration
@@ -234,21 +223,21 @@ Computer Configuration
         → Windows Update
 ```
 
-Review the available policy settings and their current states.
+The individual policy values should be reviewed in GPMC before documenting specific update behavior.
 
-The exact Windows Update policy values should be documented after checking the GPO in Group Policy Management.
+### Check Policy Application
 
-### Verify the GPO
+Use Group Policy Results on the target computer to check whether this GPO appears in the applied policy list.
 
-Use Group Policy Results to check whether the GPO is applied to the target computer.
+The presence of the GPO confirms that it was processed, but does not by itself establish which Windows Update settings are enabled.
 
-The presence of a GPO in the applied policy list confirms that it was processed, but does not by itself prove a specific Windows Update setting is active.
+## PowerShell Administration
 
-## 7. PowerShell Configuration and Management
+I also use the Group Policy PowerShell module to inspect GPOs, check inheritance, and generate reports.
 
-Run these commands on `DC01` using an elevated PowerShell session with the Group Policy module available.
+Run these commands on DC01 in an elevated PowerShell session.
 
-### Display All GPOs
+### List All GPOs
 
 ```powershell
 Get-GPO -All |
@@ -265,7 +254,7 @@ Get-GPO -Name "GPO-Defender Baseline" |
 
 ### Create a New GPO
 
-Example of creating a new GPO only if it does not already exist:
+The following example checks whether a GPO already exists before creating it.
 
 ```powershell
 $GpoName = "GPO-Example"
@@ -282,7 +271,7 @@ else {
 }
 ```
 
-This is a reusable example and does not create or modify any of the existing lab GPOs.
+This is a reusable example. It does not create or modify any of the existing lab GPOs.
 
 ### Check GPO Inheritance
 
@@ -295,7 +284,7 @@ This displays linked GPOs and inheritance information for the selected OU.
 
 ### Export GPO Reports
 
-Create a directory for reports:
+Create a directory for the reports:
 
 ```powershell
 New-Item `
@@ -313,60 +302,60 @@ Get-GPOReport `
     -Path "C:\Temp\GPO-Report.html"
 ```
 
-The report can be opened in a web browser for further inspection.
+The generated report can be opened in a browser to inspect the GPO configuration.
 
-## 8. Verification on a Windows Client
+## Checking Policies on a Windows Client
 
-These commands are run on a domain-joined Windows test computer.
+The following commands are run on a domain-joined Windows test computer.
 
-### Check Computer Policy Results
+### Display Applied Computer Policies
 
 ```powershell
 gpresult /r /scope computer
 ```
 
-This displays the computer policies applied to the machine.
+This displays the GPOs applied to the computer.
 
-### Generate an HTML Group Policy Report
+### Generate an HTML Report
 
 ```powershell
 gpresult /h C:\Temp\gpresult.html /scope computer /f
 ```
 
-Open the resulting HTML file in a browser to inspect applied policies and policy details.
+Open the generated report in a browser to inspect the applied policies and policy details.
 
-### Update Group Policy
+### Refresh Group Policy
 
 ```powershell
 gpupdate /force
 ```
 
-This requests a refresh of both computer and user Group Policy settings.
+This requests a refresh of computer and user Group Policy settings.
 
-Some policy changes may require a restart or logoff before they take effect.
+Some changes require a restart or logoff before they take effect.
 
-## 9. Screenshots
+## Screenshots
 
-The following screenshots document Group Policy configuration and verification:
+The following screenshots document the Group Policy configuration and testing:
 
 | Screenshot | Description |
 |---|---|
-| `44-gpo-management-console.png` | Group Policy Management Console |
-| `45-gpo-organizational-unit-links.png` | GPO links on the IT-Computers OU |
-| `46-gpo-defender-baseline.png` | Microsoft Defender PUA policy |
-| `47-gpo-security-audit.png` | Advanced Audit Policy configuration |
-| `48-gpo-windows-update.png` | Windows Update GPO |
-| `49-gpo-powershell-list.png` | GPO inventory through PowerShell |
-| `50-gpo-resultant-policy.png` | Applied computer policies from gpresult |
+| 44-gpo-management-console.png | Group Policy Management Console |
+| 45-gpo-organizational-unit-links.png | GPO links on the IT-Computers OU |
+| 46-gpo-defender-baseline.png | Microsoft Defender PUA policy |
+| 47-gpo-security-audit.png | Advanced Audit Policy configuration |
+| 48-gpo-windows-update.png | Windows Update GPO |
+| 49-gpo-powershell-list.png | GPO inventory through PowerShell |
+| 50-gpo-resultant-policy.png | Applied computer policies from gpresult |
 
-Only include screenshots that reflect the actual configuration.
+Only include screenshots that reflect the actual lab configuration.
 
-## 10. Summary
+## Summary
 
-Group Policy provides centralized management of Windows computer settings in the `contoso.local` domain.
+I used Group Policy to manage computer settings in the contoso.local domain.
 
-The lab includes policies for Microsoft Defender, security auditing, Windows Update, and computer configuration.
+The lab includes policies for Microsoft Defender, security auditing, Windows Update, and the IT-Computers OU.
 
-The Defender PUA protection setting was changed to Block mode and verified on the domain-joined Windows test computer.
+The Defender PUA setting was changed from Audit to Block mode and verified on the domain-joined Windows test computer.
 
-GPOs are managed through Group Policy Management Console and PowerShell. Their application is verified using `gpresult`, while individual security settings are checked directly on the target computer.
+I also used GPMC and PowerShell to inspect GPOs, review inheritance, and check which policies were applied.
