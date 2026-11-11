@@ -118,6 +118,12 @@ I keep separate notes for each part of the lab so that the configuration can be 
 | 09-group-policy-management.md | Group Policy configuration |
 | 10-smb-file-server.md | Shared folders and access permissions |
 
+## Screenshots
+
+| Screenshot | Description |
+|---|---|
+| 00-virtualbox-lab-overview.png | VirtualBox overview showing all lab virtual machines |
+
 ## Current Status
 
 The main infrastructure is in place. I have tested domain joining, DNS and DHCP functionality, PXE boot, image capture and deployment, Group Policy application, and basic FOG Snapin execution.
