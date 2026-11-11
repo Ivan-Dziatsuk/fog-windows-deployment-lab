@@ -245,9 +245,9 @@ The following screenshots document the Snapin configuration and tests.
 
 | Screenshot | Description |
 |---|---|
-| 37-fog-inventory-task.png | FOG Inventory Snapin task running on the Windows client |
-| 38-fog-inventory-success.png | Successful completion of the Inventory Snapin task |
-| 39-fog-inventory-report.png | PowerShell output displaying the generated inventory report using Get-Content |
+| 24-fog-inventory-task.png | FOG Inventory Snapin task running on the Windows client |
+| 25-fog-inventory-success.png | Successful completion of the Inventory Snapin task |
+| 26-fog-inventory-report.png | PowerShell output displaying the generated inventory report using Get-Content |
 
 Only include screenshots that actually exist and reflect the corresponding tests.
 
