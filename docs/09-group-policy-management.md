@@ -340,8 +340,8 @@ The following screenshots document the Group Policy configuration and testing:
 
 | Screenshot | Description |
 |---|---|
-| 40-gpo-management-console.png | Group Policy Management Console |
-| 41-gpo-resultant-policy.png | Applied computer policies from gpresult |
+| 27-gpo-management-console.png | Group Policy Management Console |
+| 28-gpo-resultant-policy.png | Applied computer policies from gpresult |
 
 Only include screenshots that reflect the actual lab configuration.
 
