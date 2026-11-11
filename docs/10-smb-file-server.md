@@ -314,8 +314,8 @@ The following screenshots document the SMB configuration and permission manageme
 
 | Screenshot | Description |
 |---|---|
-| 42-smb-share-permissions.png | Share permissions |
-| 43-smb-ntfs-permissions.png | NTFS security permissions configuration |
+| 29-smb-share-permissions.png | Share permissions |
+| 30-smb-ntfs-permissions.png | NTFS security permissions configuration |
 
 Only include screenshots that show the actual configuration and tests performed.
 
